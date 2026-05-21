@@ -1,0 +1,134 @@
+.login-container {
+  width: min(440px, calc(100% - 32px));
+  margin: 64px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(23, 36, 33, 0.08);
+  background: rgba(255, 253, 248, 0.96);
+}
+
+.login-logo {
+  width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 20px;
+}
+
+.login-brand-copy {
+  width: 100%;
+  margin-bottom: 22px;
+  text-align: center;
+  display: grid;
+  gap: 6px;
+}
+
+.login-brand-copy strong {
+  color: #183b35;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.login-brand-copy span {
+  color: #204f46;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-brand-copy small {
+  color: #5f6d66;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.login-form {
+  width: 90%;
+}
+
+.login-button,
+.recover-link {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  color: white;
+  background-color: #204f46;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+  font-weight: 700;
+}
+
+.login-button:hover,
+.recover-link:hover {
+  background-color: #183b35;
+}
+
+.recover-link {
+  background-color: #6c757d;
+  text-align: center;
+}
+
+.error-message {
+  margin-top: 20px;
+  color: red;
+  font-size: 14px;
+}
+
+.password-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  right: 10px;
+  font-size: 1.2em;
+  color: #666;
+}
+
+.login-input {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(27, 36, 32, 0.1);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.eye-icon {
+  width: 20px;
+  height: 30px;
+}
+
+@media (max-width: 640px) {
+  .login-container {
+    margin: 20px auto;
+    padding: 22px;
+  }
+}
