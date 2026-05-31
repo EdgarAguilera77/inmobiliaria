@@ -25,6 +25,7 @@ export const ADMIN_PERMISSION_KEYS = [
   'Imagenes',
   'Contactos',
   'Usuarios',
+  'AceptacionesLegales',
   'RolesPermisos',
   'Ventas',
   'Comisiones',
@@ -42,6 +43,7 @@ export const OBJECT_LABELS = {
   Imagenes: 'Imagenes',
   Contactos: 'Solicitudes',
   Usuarios: 'Usuarios',
+  AceptacionesLegales: 'Aceptaciones legales',
   RolesPermisos: 'Roles y permisos',
   Ventas: 'Ventas',
   Comisiones: 'Comisiones',
@@ -100,6 +102,12 @@ export const ADMIN_MENU_ITEMS = [
     permission: 'Usuarios',
   },
   {
+    name: 'Aceptaciones legales',
+    path: '/admin/aceptaciones-legales',
+    icon: faClipboardList,
+    permission: 'Usuarios',
+  },
+  {
     name: 'Roles y permisos',
     path: '/admin/roles-permisos',
     icon: faShieldHalved,
@@ -151,6 +159,6 @@ export const ADMIN_MENU_GROUPS = [
   {
     key: 'seguridad',
     name: 'Seguridad',
-    items: ['Usuarios', 'Roles y permisos'],
+    items: ['Usuarios', 'Aceptaciones legales', 'Roles y permisos'],
   },
 ];

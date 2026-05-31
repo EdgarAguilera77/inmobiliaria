@@ -9,6 +9,7 @@ const currencyFormatter = new Intl.NumberFormat('es-HN', {
 });
 
 const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
+const DEFAULT_COMMISSION_RATE = 5;
 
 const SectionHeader = ({ title, text }) => (
   <div className="admin-header">
@@ -127,12 +128,10 @@ const SaleModal = ({
             />
             <input
               value={formData.commissionRate}
-              onChange={(event) =>
-                setFormData({ ...formData, commissionRate: event.target.value })
-              }
+              onChange={() => {}}
               placeholder="% comision"
               required
-              disabled={!canCreate}
+              disabled
             />
             <input
               type="date"
@@ -254,7 +253,7 @@ const defaultSaleForm = {
   clientEmail: '',
   closingPrice: '',
   businessType: 'Venta',
-  commissionRate: '',
+  commissionRate: String(DEFAULT_COMMISSION_RATE),
   closingDate: new Date().toISOString().slice(0, 10),
   saleStatus: 'Cerrada',
   observations: '',

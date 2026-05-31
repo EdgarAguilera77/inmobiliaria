@@ -219,11 +219,10 @@ const CloseSaleModal = ({
             />
             <input
               value={formData.commissionRate}
-              onChange={(event) =>
-                setFormData({ ...formData, commissionRate: event.target.value })
-              }
+              onChange={() => {}}
               placeholder="% comision"
               required
+              disabled
             />
             <input
               type="date"

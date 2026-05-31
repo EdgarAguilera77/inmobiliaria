@@ -4,8 +4,8 @@ export const companyProfile = {
     'Consultores inmobiliarios y servicios integrales, tu aliado integral en propiedad, leyes y tecnologia',
   phone: '+504 9876-5432',
   whatsapp: '50498765432',
-  email: 'hola@novacasa.hn',
-  address: 'Blvd. Morazan, Tegucigalpa, Francisco Morazan',
+  // email: 'hola@novacasa.hn',
+  // address: 'Blvd. Morazan, Tegucigalpa, Francisco Morazan',
   mapLabel: 'Tegucigalpa, Honduras',
 };
 

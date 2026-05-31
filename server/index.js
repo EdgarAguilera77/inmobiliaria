@@ -19,6 +19,8 @@ const comisionesRoutes = require('./routes/comisiones');
 const planesRoutes = require('./routes/planes');
 const suscripcionesRoutes = require('./routes/suscripciones');
 const pagosPublicacionRoutes = require('./routes/pagosPublicacion');
+const legalTermsRoutes = require('./routes/legalTerms');
+const ensureLegalTermsSchema = require('./utils/ensureLegalTermsSchema');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -46,8 +48,22 @@ app.use('/comisiones', comisionesRoutes);
 app.use('/planes', planesRoutes);
 app.use('/suscripciones', suscripcionesRoutes);
 app.use('/pagos-publicacion', pagosPublicacionRoutes);
-const server = app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
+app.use('/legal-terms', legalTermsRoutes);
+
+let server;
+
+const startServer = async () => {
+  try {
+    await ensureLegalTermsSchema();
+    server = app.listen(PORT, () => {
+      console.log(`Servidor corriendo en el puerto ${PORT}`);
+    });
+  } catch (error) {
+    console.error('No se pudo iniciar el servidor:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 module.exports = { app, server };

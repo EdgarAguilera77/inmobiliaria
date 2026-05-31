@@ -39,6 +39,8 @@ const salesSelect = `
 const getCommercialStatusByOperation = (operation) =>
   operation === 'Renta' ? 'Rentada' : 'Vendida';
 
+const DEFAULT_COMMISSION_RATE = 5;
+
 const calculateCommissionAmount = (closingPrice, percentage) =>
   Number((Number(closingPrice || 0) * (Number(percentage || 0) / 100)).toFixed(2));
 
@@ -132,7 +134,8 @@ router.post('/', async (req, res) => {
     }
 
     const saleOperation = TIPO_NEGOCIO || property.OPERACION;
-    const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, PORCENTAJE_COMISION);
+    const normalizedCommissionRate = Number(PORCENTAJE_COMISION) || DEFAULT_COMMISSION_RATE;
+    const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, normalizedCommissionRate);
     const propertyCommercialStatus = getCommercialStatusByOperation(saleOperation);
 
     const [saleResult] = await connection.query(
@@ -152,7 +155,7 @@ router.post('/', async (req, res) => {
         property.PRECIO,
         PRECIO_CIERRE,
         saleOperation,
-        PORCENTAJE_COMISION,
+        normalizedCommissionRate,
         commissionAmount,
         FECHA_CIERRE,
         OBSERVACIONES,
@@ -164,7 +167,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO comisiones (
         ID_VENTA, ID_AGENTE, PORCENTAJE_COMISION, MONTO_COMISION, ESTADO_COMISION
       ) VALUES (?, ?, ?, ?, 'Pendiente')`,
-      [saleResult.insertId, ID_AGENTE, PORCENTAJE_COMISION, commissionAmount]
+      [saleResult.insertId, ID_AGENTE, normalizedCommissionRate, commissionAmount]
     );
 
     await connection.query(
@@ -231,7 +234,8 @@ router.put('/:id', async (req, res) => {
     }
 
     const sale = salesRows[0];
-    const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, PORCENTAJE_COMISION);
+    const normalizedCommissionRate = Number(PORCENTAJE_COMISION) || DEFAULT_COMMISSION_RATE;
+    const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, normalizedCommissionRate);
     const propertyCommercialStatus =
       ESTADO_VENTA === 'Anulada' ? 'Disponible' : getCommercialStatusByOperation(TIPO_NEGOCIO);
 
@@ -249,7 +253,7 @@ router.put('/:id', async (req, res) => {
         CORREO_CLIENTE,
         PRECIO_CIERRE,
         TIPO_NEGOCIO,
-        PORCENTAJE_COMISION,
+        normalizedCommissionRate,
         commissionAmount,
         FECHA_CIERRE,
         ESTADO_VENTA,
@@ -262,7 +266,7 @@ router.put('/:id', async (req, res) => {
       `UPDATE comisiones
        SET ID_AGENTE = ?, PORCENTAJE_COMISION = ?, MONTO_COMISION = ?
        WHERE ID_VENTA = ?`,
-      [ID_AGENTE, PORCENTAJE_COMISION, commissionAmount, req.params.id]
+      [ID_AGENTE, normalizedCommissionRate, commissionAmount, req.params.id]
     );
 
     await connection.query(

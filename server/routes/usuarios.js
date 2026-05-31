@@ -43,6 +43,7 @@ router.post('/login', async (req, res) => {
         ID_ROL: user.ID_ROL,
         ID_SERVICIO: user.ID_SERVICIO,
         ESTADO: user.ESTADO,
+        REQUIERE_ACEPTACION_TERMINOS: Number(user.REQUIERE_ACEPTACION_TERMINOS || 0),
       },
     });
   } catch (err) {
@@ -54,7 +55,17 @@ router.post('/login', async (req, res) => {
 
 // Crear un nuevo usuario con contraseña encriptada
 router.post('/', async (req, res) => {
-  const { NOMBRE, IDENTIFICACION, CORREO, TELEFONO, PASSWORD, ID_ROL, ID_SERVICIO, ESTADO } = req.body;
+  const {
+    NOMBRE,
+    IDENTIFICACION,
+    CORREO,
+    TELEFONO,
+    PASSWORD,
+    ID_ROL,
+    ID_SERVICIO,
+    ESTADO,
+    REQUIERE_ACEPTACION_TERMINOS,
+  } = req.body;
 
   if (!NOMBRE || !IDENTIFICACION || !CORREO || !TELEFONO || !PASSWORD || !ID_ROL || !ID_SERVICIO) {
     return res.status(400).json({ error: 'Faltan datos en la solicitud' });
@@ -78,10 +89,20 @@ router.post('/', async (req, res) => {
     // Insertar el nuevo usuario con contraseña encriptada
     const sql = `
       INSERT INTO gestion_usuarios 
-      (NOMBRE, IDENTIFICACION, CORREO, TELEFONO, PASSWORD, ID_ROL, ID_SERVICIO, ESTADO) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+      (NOMBRE, IDENTIFICACION, CORREO, TELEFONO, PASSWORD, ID_ROL, ID_SERVICIO, ESTADO, REQUIERE_ACEPTACION_TERMINOS) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
-    const [result] = await db.query(sql, [NOMBRE, IDENTIFICACION, CORREO, TELEFONO, hashedPassword, ID_ROL, ID_SERVICIO, ESTADO]);
+    const [result] = await db.query(sql, [
+      NOMBRE,
+      IDENTIFICACION,
+      CORREO,
+      TELEFONO,
+      hashedPassword,
+      ID_ROL,
+      ID_SERVICIO,
+      ESTADO,
+      Number(REQUIERE_ACEPTACION_TERMINOS ?? 1),
+    ]);
     res.status(201).json({ message: 'Usuario creado con éxito', usuarioId: result.insertId });
   } catch (err) {
     console.error('Error en la base de datos:', err);
@@ -110,7 +131,17 @@ router.get('/', async (req, res) => {
 // Actualizar un usuario
 router.put('/:codigo', async (req, res) => {
   const { codigo } = req.params;
-  const { NOMBRE, IDENTIFICACION, CORREO, TELEFONO, PASSWORD, ID_ROL, ID_SERVICIO, ESTADO } = req.body;
+  const {
+    NOMBRE,
+    IDENTIFICACION,
+    CORREO,
+    TELEFONO,
+    PASSWORD,
+    ID_ROL,
+    ID_SERVICIO,
+    ESTADO,
+    REQUIERE_ACEPTACION_TERMINOS,
+  } = req.body;
 
   // Verifica los campos requeridos
   if (!NOMBRE || !IDENTIFICACION || !CORREO || !TELEFONO || !ID_ROL || !ID_SERVICIO || ESTADO === undefined) {
@@ -139,7 +170,7 @@ router.put('/:codigo', async (req, res) => {
     // Actualiza el registro en la base de datos
     const sql = `
       UPDATE gestion_usuarios 
-      SET NOMBRE = ?, IDENTIFICACION = ?, CORREO = ?, TELEFONO = ?, PASSWORD = ?, ID_ROL = ?, ID_SERVICIO = ?, ESTADO = ?, CAMBIAR_PASSWORD = ?
+      SET NOMBRE = ?, IDENTIFICACION = ?, CORREO = ?, TELEFONO = ?, PASSWORD = ?, ID_ROL = ?, ID_SERVICIO = ?, ESTADO = ?, CAMBIAR_PASSWORD = ?, REQUIERE_ACEPTACION_TERMINOS = ?
       WHERE CODIGO = ?;
     `;
     const [result] = await db.query(sql, [
@@ -152,6 +183,7 @@ router.put('/:codigo', async (req, res) => {
       ID_SERVICIO,
       ESTADO,
       cambiarPassword,
+      Number(REQUIERE_ACEPTACION_TERMINOS ?? 0),
       codigo,
     ]);
 

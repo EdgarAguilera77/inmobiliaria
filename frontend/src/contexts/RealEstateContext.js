@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { companyProfile } from '../constants/realEstateSeed';
 import { API_BASE } from '../constants/api';
+const DEFAULT_COMMISSION_RATE = 5;
 
 const RealEstateContext = createContext();
 
@@ -556,7 +557,7 @@ export const RealEstateProvider = ({ children }) => {
       CORREO_CLIENTE: sale.clientEmail || null,
       PRECIO_CIERRE: Number(sale.closingPrice) || 0,
       TIPO_NEGOCIO: sale.businessType,
-      PORCENTAJE_COMISION: Number(sale.commissionRate) || 0,
+      PORCENTAJE_COMISION: Number(sale.commissionRate) || DEFAULT_COMMISSION_RATE,
       FECHA_CIERRE: sale.closingDate,
       OBSERVACIONES: sale.observations || null,
       USUARIO_CREACION: sale.userId || null,
@@ -574,7 +575,7 @@ export const RealEstateProvider = ({ children }) => {
       CORREO_CLIENTE: sale.clientEmail || null,
       PRECIO_CIERRE: Number(sale.closingPrice) || 0,
       TIPO_NEGOCIO: sale.businessType,
-      PORCENTAJE_COMISION: Number(sale.commissionRate) || 0,
+      PORCENTAJE_COMISION: Number(sale.commissionRate) || DEFAULT_COMMISSION_RATE,
       FECHA_CIERRE: sale.closingDate,
       ESTADO_VENTA: sale.saleStatus || 'Cerrada',
       OBSERVACIONES: sale.observations || null,

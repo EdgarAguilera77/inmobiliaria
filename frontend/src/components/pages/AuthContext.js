@@ -20,6 +20,31 @@ export const AuthProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
   const [cambiarPassword, setCambiarPassword] = useState(false);
+  const [requiresTermsAcceptance, setRequiresTermsAcceptance] = useState(false);
+  const [termsDocument, setTermsDocument] = useState(null);
+
+  const loadTermsStatus = async (codigoUsuario, fallbackRequired = false) => {
+    try {
+      const response = await axios.get(`${API_BASE}/legal-terms/status/${codigoUsuario}`);
+      setRequiresTermsAcceptance(Boolean(response.data.required));
+      setTermsDocument(response.data.document || null);
+      return response.data;
+    } catch (requestError) {
+      const documentFallback = {
+        version: 'v1.0',
+        title: 'Terminos y condiciones de primer ingreso',
+        text:
+          'Debes aceptar las condiciones comerciales de publicacion, suscripcion y la comision fija del 5% antes de utilizar el sistema.',
+      };
+      setRequiresTermsAcceptance(Boolean(fallbackRequired));
+      setTermsDocument(documentFallback);
+      return {
+        required: fallbackRequired,
+        accepted: !fallbackRequired,
+        document: documentFallback,
+      };
+    }
+  };
 
   const login = async (correo, password) => {
     try {
@@ -33,6 +58,10 @@ export const AuthProvider = ({ children }) => {
       setUser(loggedUser);
       setIsLoggedIn(true);
       setCambiarPassword(requiresPasswordChange || false);
+      await loadTermsStatus(
+        loggedUser.CODIGO,
+        Boolean(loggedUser.REQUIERE_ACEPTACION_TERMINOS)
+      );
 
       if (loggedUser.ID_ROL === 1) {
         setPermissions(buildAdminPermissions());
@@ -78,7 +107,32 @@ export const AuthProvider = ({ children }) => {
     setPermissions([]);
     setIsAdmin(false);
     setCambiarPassword(false);
+    setRequiresTermsAcceptance(false);
+    setTermsDocument(null);
     setError('');
+  };
+
+  const acceptTerms = async () => {
+    if (!user?.CODIGO) {
+      return { success: false, message: 'No hay un usuario activo para registrar la aceptacion.' };
+    }
+
+    try {
+      await axios.post(`${API_BASE}/legal-terms/accept`, {
+        codigoUsuario: user.CODIGO,
+        acceptedByName: user.NOMBRE,
+      });
+      setRequiresTermsAcceptance(false);
+      await loadTermsStatus(user.CODIGO, false);
+      return { success: true };
+    } catch (requestError) {
+      return {
+        success: false,
+        message:
+          requestError.response?.data?.error ||
+          'No se pudo registrar la aceptacion de terminos.',
+      };
+    }
   };
 
   const hasPermission = (objectName, permissionName = 'VER') => {
@@ -105,6 +159,9 @@ export const AuthProvider = ({ children }) => {
         hasPermission,
         error,
         cambiarPassword,
+        requiresTermsAcceptance,
+        termsDocument,
+        acceptTerms,
       }}
     >
       {children}

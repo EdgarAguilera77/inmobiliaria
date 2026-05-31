@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import CambiarPassword from './components/pages/CambiarPassword';
 import { AuthProvider, AuthContext } from './components/pages/AuthContext';
+import TermsAcceptancePage from './components/pages/TermsAcceptancePage';
 import {
   AboutPage,
   ContactPage,
@@ -30,14 +31,19 @@ import {
   AdminPublicationPaymentsPage,
   AdminSubscriptionsPage,
 } from './components/pages/AdminSubscriptions';
+import { AdminLegalTermsPage } from './components/pages/AdminLegalTermsPage';
 import { RealEstateProvider } from './contexts/RealEstateContext';
 import './App.css';
 
 const PrivateRoute = ({ children, requiredPermission }) => {
-  const { isLoggedIn, hasPermission } = useContext(AuthContext);
+  const { isLoggedIn, hasPermission, requiresTermsAcceptance } = useContext(AuthContext);
 
   if (!isLoggedIn) {
     return <Navigate to="/login" />;
+  }
+
+  if (requiresTermsAcceptance) {
+    return <Navigate to="/aceptacion-terminos" />;
   }
 
   if (!requiredPermission || hasPermission(requiredPermission, 'VER')) {
@@ -48,7 +54,7 @@ const PrivateRoute = ({ children, requiredPermission }) => {
 
 const AppContent = () => {
   const location = useLocation();
-  const { isLoggedIn, logout, cambiarPassword } = useContext(AuthContext);
+  const { isLoggedIn, logout, cambiarPassword, requiresTermsAcceptance } = useContext(AuthContext);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const isAdminRoute = useMemo(() => location.pathname.startsWith('/admin'), [location.pathname]);
@@ -60,6 +66,16 @@ const AppContent = () => {
     location.pathname !== '/login'
   ) {
     return <Navigate to="/cambiar-password" />;
+  }
+
+  if (
+    isLoggedIn &&
+    !cambiarPassword &&
+    requiresTermsAcceptance &&
+    location.pathname !== '/aceptacion-terminos' &&
+    location.pathname !== '/login'
+  ) {
+    return <Navigate to="/aceptacion-terminos" />;
   }
 
   return (
@@ -138,10 +154,31 @@ const AppContent = () => {
               </PublicLayout>
             }
           />
-          <Route path="/login" element={isLoggedIn ? <Navigate to="/admin" /> : <Login />} />
+          <Route
+            path="/login"
+            element={
+              isLoggedIn ? (
+                <Navigate
+                  to={
+                    cambiarPassword
+                      ? '/cambiar-password'
+                      : requiresTermsAcceptance
+                        ? '/aceptacion-terminos'
+                        : '/admin'
+                  }
+                />
+              ) : (
+                <Login />
+              )
+            }
+          />
           <Route
             path="/cambiar-password"
             element={isLoggedIn ? <CambiarPassword /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/aceptacion-terminos"
+            element={isLoggedIn ? <TermsAcceptancePage /> : <Navigate to="/login" />}
           />
           <Route
             path="/admin"
@@ -204,6 +241,14 @@ const AppContent = () => {
             element={
               <PrivateRoute requiredPermission="Usuarios">
                 <AdminUsersPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/aceptaciones-legales"
+            element={
+              <PrivateRoute requiredPermission="Usuarios">
+                <AdminLegalTermsPage />
               </PrivateRoute>
             }
           />

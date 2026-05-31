@@ -21,6 +21,7 @@ const emptyUser = {
   ID_ROL: '',
   ID_SERVICIO: '',
   ESTADO: 1,
+  REQUIERE_ACEPTACION_TERMINOS: 1,
 };
 
 const emptyRole = {
@@ -199,6 +200,7 @@ const mapUser = (user) => ({
   ID_ROL: user.ID_ROL,
   ID_SERVICIO: user.ID_SERVICIO,
   ESTADO: Number(user.ESTADO),
+  REQUIERE_ACEPTACION_TERMINOS: Number(user.REQUIERE_ACEPTACION_TERMINOS || 0),
   NOMBRE_ROL: user.NOMBRE_ROL,
   NOMBRE_SERVICIO: user.NOMBRE_SERVICIO,
 });
@@ -279,6 +281,7 @@ export const AdminUsersPage = () => {
       ID_ROL: Number(formData.ID_ROL),
       ID_SERVICIO: Number(formData.ID_SERVICIO),
       ESTADO: Number(formData.ESTADO),
+      REQUIERE_ACEPTACION_TERMINOS: Number(formData.REQUIERE_ACEPTACION_TERMINOS),
     };
 
     if (!editingId && !payload.PASSWORD) {
@@ -321,6 +324,7 @@ export const AdminUsersPage = () => {
       ID_ROL: String(selectedUser.ID_ROL),
       ID_SERVICIO: String(selectedUser.ID_SERVICIO),
       ESTADO: Number(selectedUser.ESTADO),
+      REQUIERE_ACEPTACION_TERMINOS: Number(selectedUser.REQUIERE_ACEPTACION_TERMINOS || 0),
     });
   };
 
@@ -432,6 +436,20 @@ export const AdminUsersPage = () => {
             <option value={1}>Activo</option>
             <option value={0}>Inactivo</option>
           </select>
+          <label className="checkbox-row single-checkbox-row">
+            <input
+              type="checkbox"
+              checked={Number(formData.REQUIERE_ACEPTACION_TERMINOS) === 1}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  REQUIERE_ACEPTACION_TERMINOS: event.target.checked ? 1 : 0,
+                })
+              }
+              disabled={!canCreate}
+            />
+            <span>Solicitar aceptacion de terminos en el primer ingreso</span>
+          </label>
           <div className="table-actions">
             <button type="submit" className="primary-button" disabled={!canCreate}>
               {editingId ? 'Actualizar usuario' : 'Crear usuario'}
@@ -455,6 +473,7 @@ export const AdminUsersPage = () => {
                 <th>Rol</th>
                 <th>Servicio</th>
                 <th>Estado</th>
+                <th>Primer ingreso</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -469,6 +488,11 @@ export const AdminUsersPage = () => {
                   <td>{listedUser.NOMBRE_ROL}</td>
                   <td>{listedUser.NOMBRE_SERVICIO}</td>
                   <td>{Number(listedUser.ESTADO) === 1 ? 'Activo' : 'Inactivo'}</td>
+                  <td>
+                    {Number(listedUser.REQUIERE_ACEPTACION_TERMINOS) === 1
+                      ? 'Pendiente de aceptar'
+                      : 'Aceptado o no requerido'}
+                  </td>
                   <td>
                     <div className="table-actions">
                       {canCreate && (
