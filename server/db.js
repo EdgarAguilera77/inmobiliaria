@@ -1,14 +1,26 @@
-const mysql = require('mysql2/promise'); // Importa la versión que soporta Promises
+require('dotenv').config();
 
-// Configuración del pool de conexiones a la base de datos
+const mysql = require('mysql2/promise');
+
+const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  throw new Error(
+    `Faltan variables de entorno para la base de datos: ${missingEnvVars.join(', ')}. ` +
+      'Crea tu archivo .env tomando como base .env.example.'
+  );
+}
+
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root', // Reemplaza con tu usuario de MySQL
-  password: '123456', // Reemplaza con tu contraseña de MySQL
-  database: 'injupen_db', // Reemplaza con el nombre de tu base de datos
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10, // Máximo de conexiones en el pool
-  queueLimit: 0
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-module.exports = pool; // Exporta el pool de conexiones
+module.exports = pool;

@@ -6,6 +6,8 @@ frontend/build/
 
 .env
 .env.*
+!.env.example
+!frontend/.env.production
 
 *.log
 npm-debug.log*

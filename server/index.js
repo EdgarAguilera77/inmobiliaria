@@ -1,5 +1,6 @@
+require('dotenv').config();
+
 const express = require('express');
-const cors = require('cors'); // Importa cors
 const bodyParser = require('body-parser');
 
 const usuarioRoutes = require('./routes/usuarios');
@@ -22,13 +23,9 @@ const pagosPublicacionRoutes = require('./routes/pagosPublicacion');
 const legalTermsRoutes = require('./routes/legalTerms');
 const ensureLegalTermsSchema = require('./utils/ensureLegalTermsSchema');
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Configuración de CORS
-app.use(cors({
-  origin: 'http://localhost:3000'  // Permite solicitudes desde localhost:3000
-}));
-
 app.use(bodyParser.json({ limit: '15mb' }));
 
 app.use('/usuarios', usuarioRoutes);
