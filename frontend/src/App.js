@@ -1,5 +1,7 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars } from '@fortawesome/free-solid-svg-icons';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import CambiarPassword from './components/pages/CambiarPassword';
@@ -56,8 +58,27 @@ const AppContent = () => {
   const location = useLocation();
   const { isLoggedIn, logout, cambiarPassword, requiresTermsAcceptance } = useContext(AuthContext);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const isAdminRoute = useMemo(() => location.pathname.startsWith('/admin'), [location.pathname]);
+
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !isAdminRoute) {
+      document.body.style.overflow = '';
+      return undefined;
+    }
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    document.body.style.overflow = isMobileViewport && isMobileSidebarOpen ? 'hidden' : '';
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isAdminRoute, isLoggedIn, isMobileSidebarOpen]);
 
   if (
     isLoggedIn &&
@@ -85,12 +106,30 @@ const AppContent = () => {
       } ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
     >
       {isLoggedIn && isAdminRoute && (
-        <Sidebar
-          handleLogout={logout}
-          toggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
-          isCollapsed={isSidebarCollapsed}
-          showSidebar={true}
-        />
+        <>
+          <button
+            type="button"
+            className="mobile-sidebar-toggle"
+            onClick={() => setIsMobileSidebarOpen(true)}
+            aria-label="Abrir menu de navegacion"
+          >
+            <FontAwesomeIcon icon={faBars} />
+          </button>
+          <button
+            type="button"
+            className={`mobile-sidebar-overlay ${isMobileSidebarOpen ? 'visible' : ''}`}
+            onClick={() => setIsMobileSidebarOpen(false)}
+            aria-label="Cerrar menu lateral"
+          />
+          <Sidebar
+            handleLogout={logout}
+            toggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
+            isCollapsed={isSidebarCollapsed}
+            isMobileOpen={isMobileSidebarOpen}
+            onMobileClose={() => setIsMobileSidebarOpen(false)}
+            showSidebar={true}
+          />
+        </>
       )}
       <main
         className={`main-content ${

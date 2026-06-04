@@ -10,14 +10,23 @@ import {
   faFolderTree,
   faSignOutAlt,
   faShieldHalved,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from './pages/AuthContext';
 import { ADMIN_MENU_GROUPS, ADMIN_MENU_ITEMS } from '../constants/permissions';
 import jmLogo from '../assets/JM.jpeg';
 
-const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
+const Sidebar = ({
+  handleLogout,
+  toggleSidebar,
+  isCollapsed,
+  isMobileOpen,
+  onMobileClose,
+  showSidebar,
+}) => {
   const { permissions, isAdmin, user } = useContext(AuthContext);
   const location = useLocation();
+  const isCompact = isCollapsed && !isMobileOpen;
 
   const [openGroup, setOpenGroup] = useState('operacion');
 
@@ -50,7 +59,7 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
   );
 
   useEffect(() => {
-    if (isCollapsed) {
+    if (isCompact) {
       return;
     }
 
@@ -65,7 +74,7 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
     if (activeGroup) {
       setOpenGroup(activeGroup.key);
     }
-  }, [isCollapsed, location.pathname, menuGroups]);
+  }, [isCompact, location.pathname, menuGroups]);
 
   const getGroupIcon = (groupKey) => {
     if (groupKey === 'seguridad') {
@@ -82,10 +91,25 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
   if (!showSidebar) return null;
 
   return (
-    <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+    <nav className={`sidebar ${isCompact ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-logo">
-        <FontAwesomeIcon icon={faBars} onClick={toggleSidebar} />
-        {!isCollapsed && (
+        <button
+          type="button"
+          className="sidebar-icon-button desktop-sidebar-toggle"
+          onClick={toggleSidebar}
+          aria-label="Colapsar menu lateral"
+        >
+          <FontAwesomeIcon icon={faBars} />
+        </button>
+        <button
+          type="button"
+          className="sidebar-icon-button mobile-sidebar-close"
+          onClick={onMobileClose}
+          aria-label="Cerrar menu lateral"
+        >
+          <FontAwesomeIcon icon={faXmark} />
+        </button>
+        {!isCompact && (
           <>
             <img src={jmLogo} alt="Global" className="sidebar-brand-image" />
             <span className="sidebar-brand-copy">
@@ -99,7 +123,7 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
         <div className="sidebar-user-icon">
           <FontAwesomeIcon icon={faBuilding} />
         </div>
-        {!isCollapsed && (
+        {!isCompact && (
           <div>
             <strong>{user?.NOMBRE || 'Panel administrativo'}</strong>
             <p>{isAdmin ? 'Administrador' : 'Usuario con permisos'}</p>
@@ -113,14 +137,15 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
               to={dashboardItem.path}
               className={({ isActive }) => (isActive ? 'active' : '')}
               end={dashboardItem.path === '/admin'}
+              onClick={onMobileClose}
             >
               <FontAwesomeIcon icon={dashboardItem.icon} />
-              {!isCollapsed && dashboardItem.name}
+              {!isCompact && dashboardItem.name}
             </NavLink>
           </li>
         )}
         {menuGroups.map((group) => {
-          const isGroupOpen = !isCollapsed && openGroup === group.key;
+          const isGroupOpen = !isCompact && openGroup === group.key;
           const hasActiveRoute = group.items.some((item) => location.pathname.startsWith(item.path));
 
           return (
@@ -134,7 +159,7 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
                 type="button"
                 className="nav-accordion-trigger"
                 onClick={() => {
-                  if (isCollapsed) {
+                  if (isCompact) {
                     toggleSidebar();
                     return;
                   }
@@ -144,13 +169,13 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
               >
                 <span className="nav-accordion-title">
                   <FontAwesomeIcon icon={getGroupIcon(group.key)} />
-                  {!isCollapsed && group.name}
+                  {!isCompact && group.name}
                 </span>
-                {!isCollapsed && (
+                {!isCompact && (
                   <FontAwesomeIcon icon={isGroupOpen ? faChevronDown : faChevronRight} />
                 )}
               </button>
-              {!isCollapsed && (
+              {!isCompact && (
                 <div className={`nav-accordion-panel ${isGroupOpen ? 'expanded' : ''}`}>
                   {group.items.map((item) => (
                     <NavLink
@@ -160,6 +185,7 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
                         `nav-subitem ${isActive ? 'active' : ''}`.trim()
                       }
                       end={item.path === '/admin'}
+                      onClick={onMobileClose}
                     >
                       <FontAwesomeIcon icon={item.icon} />
                       <span>{item.name}</span>
@@ -171,14 +197,20 @@ const Sidebar = ({ handleLogout, toggleSidebar, isCollapsed, showSidebar }) => {
           );
         })}
         <li className="nav-item">
-          <NavLink to="/" end>
+          <NavLink to="/" end onClick={onMobileClose}>
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-            {!isCollapsed && 'Ver sitio publico'}
+            {!isCompact && 'Ver sitio publico'}
           </NavLink>
         </li>
-        <li className="nav-item logout" onClick={handleLogout}>
+        <li
+          className="nav-item logout"
+          onClick={() => {
+            onMobileClose?.();
+            handleLogout();
+          }}
+          >
           <FontAwesomeIcon icon={faSignOutAlt} />
-          {!isCollapsed && 'Cerrar sesion'}
+          {!isCompact && 'Cerrar sesion'}
         </li>
       </ul>
     </nav>
