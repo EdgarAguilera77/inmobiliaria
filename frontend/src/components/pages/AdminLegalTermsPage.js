@@ -373,14 +373,14 @@ export const AdminLegalTermsPage = () => {
             {filteredAcceptances.length > 0 ? (
               filteredAcceptances.map((acceptance) => (
                 <tr key={acceptance.ID_ACEPTACION}>
-                  <td>
+                  <td data-label="Usuario">
                     <strong>{acceptance.NOMBRE}</strong>
                     <div>{acceptance.CORREO}</div>
                     <div>Codigo usuario: {acceptance.CODIGO_USUARIO}</div>
                   </td>
-                  <td>{new Date(acceptance.FECHA_ACEPTACION).toLocaleString('es-HN')}</td>
-                  <td>{acceptance.TITULO_TERMINOS}</td>
-                  <td>
+                  <td data-label="Fecha">{new Date(acceptance.FECHA_ACEPTACION).toLocaleString('es-HN')}</td>
+                  <td data-label="Documento">{acceptance.TITULO_TERMINOS}</td>
+                  <td data-label="Acciones">
                     <div className="table-actions">
                       <ActionButton onClick={() => setSelectedAcceptance(acceptance)} tone="ghost">
                         Ver texto

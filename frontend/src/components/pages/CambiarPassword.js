@@ -64,7 +64,11 @@ const CambiarPassword = () => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al cambiar la contrasena.');
+      setError(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Error al cambiar la contrasena.'
+      );
     }
   };
 

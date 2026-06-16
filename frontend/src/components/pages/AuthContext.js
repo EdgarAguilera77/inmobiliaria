@@ -96,8 +96,12 @@ export const AuthProvider = ({ children }) => {
         message: 'Contrasena actualizada con exito. Por favor, inicie sesion nuevamente.',
       };
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cambiar la contrasena.');
-      return { success: false, message: 'Error al cambiar la contrasena.' };
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Error al cambiar la contrasena.';
+      setError(message);
+      return { success: false, message };
     }
   };
 

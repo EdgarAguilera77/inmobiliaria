@@ -3,6 +3,22 @@ const router = express.Router();
 const db = require('../db');
 const { recalculatePropertyPublicationState, syncExpiredSubscriptions } = require('../utils/publication');
 
+const getSqlErrorMessage = (error, fallbackMessage) => {
+  if (!error || !error.code) {
+    return fallbackMessage;
+  }
+
+  if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+    return 'La propiedad, el plan o el agente seleccionado no existe en la base de datos.';
+  }
+
+  if (error.code === 'ER_BAD_NULL_ERROR') {
+    return 'Faltan datos obligatorios para guardar la suscripcion.';
+  }
+
+  return fallbackMessage;
+};
+
 const subscriptionSelect = `
   SELECT
     s.ID_SUSCRIPCION,
@@ -117,11 +133,35 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'La propiedad y el plan son obligatorios.' });
   }
 
-  const connection = await db.getConnection();
+  if (!FECHA_INICIO) {
+    return res.status(400).json({ error: 'La fecha inicial es obligatoria.' });
+  }
+
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
     await syncExpiredSubscriptions(connection);
+
+    const [[property]] = await connection.query(
+      `SELECT ID_PROPIEDAD, ACTIVA, ESTADO_COMERCIAL
+       FROM propiedades
+       WHERE ID_PROPIEDAD = ?`,
+      [ID_PROPIEDAD]
+    );
+
+    if (!property) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Propiedad no encontrada.' });
+    }
+
+    if (!property.ACTIVA || property.ESTADO_COMERCIAL !== 'Disponible') {
+      await connection.rollback();
+      return res.status(409).json({
+        error: 'La propiedad debe estar activa y disponible para asignarle una suscripcion.',
+      });
+    }
 
     const [[plan]] = await connection.query(
       `SELECT ID_PLAN, PRECIO, DURACION_DIAS, ESTADO
@@ -182,11 +222,15 @@ router.post('/', async (req, res) => {
     await connection.commit();
     res.status(201).json({ message: 'Suscripcion creada con exito', id: result.insertId });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al crear suscripcion:', error);
-    res.status(500).json({ error: 'Error al crear suscripcion' });
+    res.status(500).json({ error: getSqlErrorMessage(error, 'Error al crear suscripcion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
@@ -206,9 +250,14 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'El plan es obligatorio.' });
   }
 
-  const connection = await db.getConnection();
+  if (!FECHA_INICIO) {
+    return res.status(400).json({ error: 'La fecha inicial es obligatoria.' });
+  }
+
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
     await syncExpiredSubscriptions(connection);
 
@@ -235,6 +284,11 @@ router.put('/:id', async (req, res) => {
     if (!plan) {
       await connection.rollback();
       return res.status(404).json({ error: 'Plan no encontrado.' });
+    }
+
+    if (!plan.ESTADO) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'El plan seleccionado esta inactivo.' });
     }
 
     const startDate = formatDate(parseDate(FECHA_INICIO));
@@ -271,18 +325,23 @@ router.put('/:id', async (req, res) => {
     await connection.commit();
     res.status(200).json({ message: 'Suscripcion actualizada con exito' });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al actualizar suscripcion:', error);
-    res.status(500).json({ error: 'Error al actualizar suscripcion' });
+    res.status(500).json({ error: getSqlErrorMessage(error, 'Error al actualizar suscripcion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
 router.delete('/:id', async (req, res) => {
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
     const [[currentSubscription]] = await connection.query(
@@ -307,11 +366,15 @@ router.delete('/:id', async (req, res) => {
     await connection.commit();
     res.status(200).json({ message: 'Suscripcion eliminada con exito' });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al eliminar suscripcion:', error);
-    res.status(500).json({ error: 'Error al eliminar suscripcion' });
+    res.status(500).json({ error: getSqlErrorMessage(error, 'Error al eliminar suscripcion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

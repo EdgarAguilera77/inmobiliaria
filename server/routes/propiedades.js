@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const slugify = require('../utils/slugify');
-const { syncPublicationStateForAllProperties } = require('../utils/publication');
+const {
+  recalculatePropertyPublicationState,
+  syncPublicationStateForAllProperties,
+} = require('../utils/publication');
 
 const basePropertySelect = `
   SELECT p.ID_PROPIEDAD, p.ID_TIPO_PROPIEDAD, p.ID_ZONA, p.ID_AGENTE, p.TITULO, p.SLUG, p.OPERACION,
@@ -317,6 +320,8 @@ router.patch('/:id/toggle-activa', async (req, res) => {
     if (!result.affectedRows) {
       return res.status(404).json({ error: 'Propiedad no encontrada' });
     }
+
+    await recalculatePropertyPublicationState(Number(req.params.id));
 
     res.status(200).json({ message: 'Estado activa actualizado con exito' });
   } catch (error) {

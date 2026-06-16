@@ -1,6 +1,7 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from './AuthContext';
 import { useRealEstate } from '../../contexts/RealEstateContext';
+import AdminPagination from '../common/AdminPagination';
 
 const currencyFormatter = new Intl.NumberFormat('es-HN', {
   style: 'currency',
@@ -33,6 +34,37 @@ const PermissionHint = ({ canCreate, canDelete }) => {
   }
 
   return <div className="permission-hint">{message}</div>;
+};
+
+const useAdminPagination = (items, initialPageSize = 10) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(initialPageSize);
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return items.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, items, itemsPerPage]);
+
+  const updateItemsPerPage = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
+  return {
+    currentPage,
+    itemsPerPage,
+    totalPages,
+    paginatedItems,
+    setCurrentPage,
+    setItemsPerPage: updateItemsPerPage,
+  };
 };
 
 const SaleModal = ({
@@ -266,6 +298,23 @@ export const AdminSalesPage = () => {
   const canDelete = hasPermission('Ventas', 'ELIMINAR');
   const [editingSale, setEditingSale] = useState(null);
   const [formData, setFormData] = useState(defaultSaleForm);
+  const pagination = useAdminPagination(sales);
+  const monthlySalesTotal = useMemo(
+    () =>
+      sales.reduce((total, sale) => {
+        const saleDate = sale.closingDate ? new Date(sale.closingDate) : null;
+        const now = new Date();
+        if (
+          !saleDate ||
+          saleDate.getMonth() !== now.getMonth() ||
+          saleDate.getFullYear() !== now.getFullYear()
+        ) {
+          return total;
+        }
+        return total + Number(sale.closingPrice || 0);
+      }, 0),
+    [sales]
+  );
 
   const openEditModal = (sale) => {
     setEditingSale(sale);
@@ -312,6 +361,16 @@ export const AdminSalesPage = () => {
         text="Consulta cierres de negocio, edita ventas registradas y revierte operaciones si es necesario."
       />
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Ventas registradas</span>
+          <strong>{sales.length}</strong>
+        </div>
+        <div className="admin-inline-summary">
+          <span>Total del mes</span>
+          <strong>{formatMoney(monthlySalesTotal)}</strong>
+        </div>
+      </div>
       <div className="admin-panel">
         <table className="admin-table">
           <thead>
@@ -326,27 +385,27 @@ export const AdminSalesPage = () => {
             </tr>
           </thead>
           <tbody>
-            {sales.map((sale) => (
-              <tr key={sale.id}>
-                <td>
+            {pagination.paginatedItems.map((sale) => (
+                <tr key={sale.id}>
+                <td data-label="Propiedad">
                   <strong>{sale.propertyTitle}</strong>
                   <div>{sale.businessType}</div>
                 </td>
-                <td>
+                <td data-label="Cliente">
                   <strong>{sale.clientName}</strong>
                   <div>{sale.clientPhone}</div>
                 </td>
-                <td>{sale.agentName}</td>
-                <td>
+                <td data-label="Agente">{sale.agentName}</td>
+                <td data-label="Cierre">
                   <strong>{formatMoney(sale.closingPrice)}</strong>
                   <div>{String(sale.closingDate).slice(0, 10)}</div>
                 </td>
-                <td>
+                <td data-label="Comision">
                   <strong>{formatMoney(sale.commissionAmount)}</strong>
                   <div>{sale.commissionRate}%</div>
                 </td>
-                <td>{sale.saleStatus}</td>
-                <td>
+                <td data-label="Estado">{sale.saleStatus}</td>
+                <td data-label="Acciones">
                   <div className="table-actions">
                     {canCreate && (
                       <button
@@ -372,6 +431,14 @@ export const AdminSalesPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={sales.length}
+          itemsPerPage={pagination.itemsPerPage}
+          onPageChange={pagination.setCurrentPage}
+          onItemsPerPageChange={pagination.setItemsPerPage}
+        />
       </div>
       <SaleModal
         isOpen={Boolean(editingSale)}
@@ -397,6 +464,7 @@ export const AdminCommissionsPage = () => {
     paymentDate: '',
     paymentNotes: '',
   });
+  const pagination = useAdminPagination(commissions);
 
   const openCommissionModal = (commission) => {
     setSelectedCommission(commission);
@@ -462,6 +530,12 @@ export const AdminCommissionsPage = () => {
           <strong>{formatMoney(summary.paid)}</strong>
         </div>
       </div>
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Comisiones registradas</span>
+          <strong>{commissions.length}</strong>
+        </div>
+      </div>
       <div className="admin-panel">
         <table className="admin-table">
           <thead>
@@ -474,19 +548,19 @@ export const AdminCommissionsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {commissions.map((commission) => (
-              <tr key={commission.id}>
-                <td>
+            {pagination.paginatedItems.map((commission) => (
+                <tr key={commission.id}>
+                <td data-label="Propiedad">
                   <strong>{commission.propertyTitle}</strong>
                   <div>{commission.clientName}</div>
                 </td>
-                <td>{commission.agentName}</td>
-                <td>
+                <td data-label="Agente">{commission.agentName}</td>
+                <td data-label="Monto">
                   <strong>{formatMoney(commission.amount)}</strong>
                   <div>{commission.commissionRate}%</div>
                 </td>
-                <td>{commission.status}</td>
-                <td>
+                <td data-label="Estado">{commission.status}</td>
+                <td data-label="Pago">
                   <div className="table-actions">
                     <button
                       type="button"
@@ -501,6 +575,14 @@ export const AdminCommissionsPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={commissions.length}
+          itemsPerPage={pagination.itemsPerPage}
+          onPageChange={pagination.setCurrentPage}
+          onItemsPerPageChange={pagination.setItemsPerPage}
+        />
       </div>
       <CommissionModal
         isOpen={Boolean(selectedCommission)}

@@ -3,6 +3,22 @@ const router = express.Router();
 const db = require('../db');
 const { recalculatePropertyPublicationState, syncExpiredSubscriptions } = require('../utils/publication');
 
+const getSqlErrorMessage = (error, fallbackMessage) => {
+  if (!error || !error.code) {
+    return fallbackMessage;
+  }
+
+  if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+    return 'La suscripcion seleccionada no existe en la base de datos.';
+  }
+
+  if (error.code === 'ER_BAD_NULL_ERROR') {
+    return 'Faltan datos obligatorios para guardar el pago.';
+  }
+
+  return fallbackMessage;
+};
+
 const paymentSelect = `
   SELECT
     ps.ID_PAGO,
@@ -114,9 +130,10 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'La suscripcion y el monto son obligatorios.' });
   }
 
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
     await syncExpiredSubscriptions(connection);
 
@@ -155,11 +172,17 @@ router.post('/', async (req, res) => {
     await connection.commit();
     res.status(201).json({ message: 'Pago registrado con exito', id: result.insertId });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al registrar pago de publicacion:', error);
-    res.status(500).json({ error: 'Error al registrar pago de publicacion' });
+    res
+      .status(500)
+      .json({ error: getSqlErrorMessage(error, 'Error al registrar pago de publicacion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
@@ -177,9 +200,10 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'El monto del pago es obligatorio.' });
   }
 
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
     await syncExpiredSubscriptions(connection);
 
@@ -219,18 +243,25 @@ router.put('/:id', async (req, res) => {
     await connection.commit();
     res.status(200).json({ message: 'Pago actualizado con exito' });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al actualizar pago de publicacion:', error);
-    res.status(500).json({ error: 'Error al actualizar pago de publicacion' });
+    res
+      .status(500)
+      .json({ error: getSqlErrorMessage(error, 'Error al actualizar pago de publicacion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
 router.delete('/:id', async (req, res) => {
-  const connection = await db.getConnection();
+  let connection;
 
   try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
     const [[payment]] = await connection.query(
@@ -254,11 +285,17 @@ router.delete('/:id', async (req, res) => {
     await connection.commit();
     res.status(200).json({ message: 'Pago eliminado con exito' });
   } catch (error) {
-    await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error al eliminar pago de publicacion:', error);
-    res.status(500).json({ error: 'Error al eliminar pago de publicacion' });
+    res
+      .status(500)
+      .json({ error: getSqlErrorMessage(error, 'Error al eliminar pago de publicacion') });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 });
 

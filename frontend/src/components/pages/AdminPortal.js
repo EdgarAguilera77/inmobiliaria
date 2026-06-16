@@ -255,266 +255,40 @@ const CloseSaleModal = ({
   );
 };
 
-export const AdminDashboardPage = () => {
-  const {
-    properties,
-    agents,
-    propertyTypes,
-    zones,
-    contacts,
-    sales,
-    commissions,
-    plans,
-    subscriptions,
-    publicationPayments,
-    isLoading,
-  } = useRealEstate();
-
-  if (isLoading) {
-    return <div className="admin-page"><h2>Cargando dashboard...</h2></div>;
-  }
-
-  const activeProperties = properties.filter((property) => property.active).length;
-  const featuredProperties = properties.filter((property) => property.featured).length;
-  const newContacts = contacts.filter((contact) => contact.status === 'Nuevo').length;
-  const monthlySalesTotal = sales
-    .filter((sale) => String(sale.closingDate).slice(0, 7) === new Date().toISOString().slice(0, 7))
-    .reduce((total, sale) => total + sale.closingPrice, 0);
-  const pendingCommissions = commissions
-    .filter((commission) => commission.status === 'Pendiente')
-    .reduce((total, commission) => total + commission.amount, 0);
-  const publishedProperties = properties.filter(
-    (property) => property.active && property.publicationStatus === 'Publicada'
-  ).length;
-  const monthlySubscriptionRevenue = publicationPayments
-    .filter(
-      (payment) =>
-        payment.status === 'Pagado' &&
-        String(payment.paidAt || payment.createdAt).slice(0, 7) ===
-          new Date().toISOString().slice(0, 7)
-    )
-    .reduce((total, payment) => total + payment.amount, 0);
-
-  return (
-    <div className="admin-page">
-      <SectionHeader
-        eyebrow="Administrativo"
-        title="Dashboard"
-        text="Resumen general de catalogo, visibilidad comercial y solicitudes entrantes."
-      />
-      <div className="admin-stat-grid">
-        <AdminStatCard label="Propiedades activas" value={activeProperties} accent="accent-one" />
-        <AdminStatCard
-          label="Propiedades destacadas"
-          value={featuredProperties}
-          accent="accent-two"
-        />
-        <AdminStatCard label="Solicitudes nuevas" value={newContacts} accent="accent-three" />
-        <AdminStatCard
-          label="Agentes activos"
-          value={agents.filter((agent) => agent.status === 'Activo').length}
-        />
-        <AdminStatCard label="Ventas del mes" value={formatCurrency(monthlySalesTotal, 0)} />
-        <AdminStatCard
-          label="Comisiones pendientes"
-          value={formatCurrency(pendingCommissions, 0)}
-        />
-        <AdminStatCard label="Publicadas" value={publishedProperties} />
-        <AdminStatCard
-          label="Ingresos por suscripcion"
-          value={formatCurrency(monthlySubscriptionRevenue, 0)}
-        />
-      </div>
-      <div className="admin-panel-grid">
-        <div className="admin-panel">
-          <h3>Estado del inventario</h3>
-          <ul className="admin-list">
-            <li>Tipos de propiedad: {propertyTypes.length}</li>
-            <li>Zonas o ciudades: {zones.length}</li>
-            <li>Propiedades publicadas: {publishedProperties}</li>
-            <li>Propiedades ocultas: {properties.length - activeProperties}</li>
-            <li>Planes activos: {plans.filter((plan) => plan.active).length}</li>
-          </ul>
-        </div>
-        <div className="admin-panel">
-          <h3>Seguimiento comercial</h3>
-          <ul className="admin-list">
-            <li>Suscripciones activas: {subscriptions.filter((item) => item.status === 'Activa').length}</li>
-            <li>Pagos pendientes: {publicationPayments.filter((item) => item.status === 'Pendiente').length}</li>
-            {contacts.slice(0, 5).map((contact) => (
-              <li key={contact.id}>
-                <strong>{contact.name}</strong> - {contact.status}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const AdminPropertiesPage = () => {
-  const { hasPermission, user } = useContext(AuthContext);
-  const {
-    agents,
-    createSale,
-    properties,
-    propertyTypes,
-    zones,
-    isLoading,
-    saveProperty,
-    deleteProperty,
-    togglePropertyActive,
-    togglePropertyFeatured,
-  } = useRealEstate();
-  const canCreate = hasPermission('Propiedades', 'CREAR');
-  const canDelete = hasPermission('Propiedades', 'ELIMINAR');
-  const canCreateSales = hasPermission('Ventas', 'CREAR');
-  const [formData, setFormData] = useState(emptyProperty);
-  const [editingId, setEditingId] = useState(null);
-  const [imageError, setImageError] = useState('');
-  const [saleProperty, setSaleProperty] = useState(null);
-  const [saleForm, setSaleForm] = useState(createEmptySaleClosure());
-
-  const propertyImagePreviews = useMemo(
-    () => formData.images.filter(Boolean),
-    [formData.images]
-  );
-
-  const normalizeFiles = async (fileList) => {
-    const files = Array.from(fileList || []);
-    const oversized = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
-
-    if (oversized) {
-      throw new Error(`La imagen ${oversized.name} supera el limite de 3 MB.`);
-    }
-
-    return Promise.all(
-      files.map(async (file) => {
-        const imageBase64 = await readFileAsDataUrl(file);
-        const response = await uploadApi.post('/uploads/preview-base64', {
-          fileName: file.name,
-          imageBase64,
-        });
-        return response.data.previewUrl;
-      })
-    );
-  };
-
-  const handleCoverFileChange = async (event) => {
-    const selectedFiles = event.target.files;
-    if (!selectedFiles?.length) {
-      return;
-    }
-
-    try {
-      setImageError('');
-      const [coverDataUrl] = await normalizeFiles(selectedFiles);
-      setFormData((current) => ({ ...current, coverImage: coverDataUrl }));
-    } catch (error) {
-      setImageError(error.message);
-    } finally {
-      event.target.value = '';
-    }
-  };
-
-  const handleGalleryFileChange = async (event) => {
-    const selectedFiles = event.target.files;
-    if (!selectedFiles?.length) {
-      return;
-    }
-
-    try {
-      setImageError('');
-      const galleryImages = await normalizeFiles(selectedFiles);
-      setFormData((current) => {
-        const nextImages = [...current.images.filter(Boolean), ...galleryImages];
-        return {
-          ...current,
-          coverImage: current.coverImage || galleryImages[0] || '',
-          images: nextImages,
-        };
-      });
-    } catch (error) {
-      setImageError(error.message);
-    } finally {
-      event.target.value = '';
-    }
-  };
-
-  const editProperty = (property) => {
-    setEditingId(property.id);
-    setImageError('');
-    setFormData({
-      ...property,
-      typeId: String(property.typeId),
-      zoneId: String(property.zoneId),
-      agentId: String(property.agentId),
-      price: String(property.price),
-      bedrooms: String(property.bedrooms),
-      bathrooms: String(property.bathrooms),
-      parking: String(property.parking),
-      area: String(property.area),
-      images: property.images.length ? property.images : [''],
-    });
-  };
-
-  const openSaleModal = (property) => {
-    setSaleProperty(property);
-    setSaleForm({
-      ...createEmptySaleClosure(),
-      propertyId: String(property.id),
-      agentId: String(property.agentId || ''),
-      closingPrice: String(property.price || ''),
-      businessType: property.operation,
-    });
-  };
-
-  const closeSaleModal = () => {
-    setSaleProperty(null);
-    setSaleForm(createEmptySaleClosure());
-  };
-
-  const submitSale = async (event) => {
-    event.preventDefault();
-    if (!saleProperty) {
-      return;
-    }
-
-    await createSale({
-      ...saleForm,
-      propertyId: saleProperty.id,
-      userId: user?.CODIGO || null,
-    });
-    closeSaleModal();
-  };
-
-  const submitForm = (event) => {
-    event.preventDefault();
-    if (!canCreate) {
-      return;
-    }
-    setImageError('');
-    const fallbackCoverImage = formData.coverImage || formData.images.find(Boolean) || '';
-    saveProperty({ ...formData, id: editingId, coverImage: fallbackCoverImage });
-    setFormData(emptyProperty);
-    setEditingId(null);
-  };
-
-  if (isLoading) {
-    return <div className="admin-page"><h2>Cargando propiedades...</h2></div>;
+const PropertyFormModal = ({
+  isOpen,
+  editingId,
+  canCreate,
+  formData,
+  setFormData,
+  propertyTypes,
+  zones,
+  agents,
+  handleCoverFileChange,
+  handleGalleryFileChange,
+  propertyImagePreviews,
+  imageError,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) {
+    return null;
   }
 
   return (
-    <div className="admin-page">
-      <SectionHeader
-        title="Propiedades"
-        text="Crea, edita, destaca y activa o desactiva propiedades desde un solo formulario."
-      />
-      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
-      {imageError && <div className="feedback-banner error">{imageError}</div>}
-      <div className="admin-workspace">
-        <form className="admin-form" onSubmit={submitForm}>
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal admin-modal-wide" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Propiedades</span>
+            <h3>{editingId ? 'Editar propiedad' : 'Nueva propiedad'}</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        {imageError && <div className="feedback-banner error">{imageError}</div>}
+        <form className="compact-admin-form" onSubmit={onSubmit}>
           <input
             value={formData.title}
             onChange={(event) => setFormData({ ...formData, title: event.target.value })}
@@ -719,116 +493,46 @@ export const AdminPropertiesPage = () => {
               Activa
             </label>
           </div>
-          <button type="submit" className="primary-button" disabled={!canCreate}>
-            {editingId ? 'Actualizar propiedad' : 'Crear propiedad'}
-          </button>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              {editingId ? 'Actualizar propiedad' : 'Crear propiedad'}
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
         </form>
-
-        <div className="admin-panel">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Propiedad</th>
-                <th>Tipo</th>
-                <th>Zona</th>
-                <th>Estado comercial</th>
-                <th>Publicacion</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map((property) => (
-                <tr key={property.id}>
-                  <td>{property.title}</td>
-                  <td>{property.type?.name}</td>
-                  <td>{property.zone?.name}</td>
-                  <td>{property.commercialStatus}</td>
-                  <td>{property.publicationStatus}</td>
-                  <td>{property.active ? 'Activa' : 'Inactiva'}</td>
-                  <td>
-                    <CrudActions
-                      onEdit={() => editProperty(property)}
-                      onDelete={() => deleteProperty(property.id)}
-                      canEdit={canCreate}
-                      canDelete={canDelete}
-                    >
-                      {canCreate && (
-                        <button
-                          type="button"
-                          className="table-button"
-                          onClick={() => togglePropertyFeatured(property.id)}
-                        >
-                          {property.featured ? 'Quitar destacada' : 'Destacar'}
-                        </button>
-                      )}
-                      {canCreate && (
-                        <button
-                          type="button"
-                          className="table-button"
-                          onClick={() => togglePropertyActive(property.id)}
-                        >
-                          {property.active ? 'Desactivar' : 'Activar'}
-                        </button>
-                      )}
-                      {canCreateSales && property.commercialStatus === 'Disponible' && (
-                        <button
-                          type="button"
-                          className="table-button"
-                          onClick={() => openSaleModal(property)}
-                        >
-                          {property.operation === 'Renta' ? 'Cerrar renta' : 'Cerrar venta'}
-                        </button>
-                      )}
-                    </CrudActions>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
-      <CloseSaleModal
-        isOpen={Boolean(saleProperty)}
-        property={saleProperty}
-        formData={saleForm}
-        setFormData={setSaleForm}
-        agents={agents}
-        onClose={closeSaleModal}
-        onSubmit={submitSale}
-      />
     </div>
   );
 };
 
-export const AdminAgentsPage = () => {
-  const { hasPermission } = useContext(AuthContext);
-  const { agents, saveAgent, deleteAgent, isLoading } = useRealEstate();
-  const canCreate = hasPermission('Agentes', 'CREAR');
-  const canDelete = hasPermission('Agentes', 'ELIMINAR');
-  const [formData, setFormData] = useState(emptyAgent);
-  const [editingId, setEditingId] = useState(null);
-
-  const submitForm = (event) => {
-    event.preventDefault();
-    if (!canCreate) {
-      return;
-    }
-    saveAgent({ ...formData, id: editingId });
-    setFormData(emptyAgent);
-    setEditingId(null);
-  };
-
-  if (isLoading) {
-    return <div className="admin-page"><h2>Cargando agentes...</h2></div>;
+const AgentFormModal = ({
+  isOpen,
+  editingId,
+  formData,
+  setFormData,
+  canCreate,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) {
+    return null;
   }
 
   return (
-    <div className="admin-page">
-      <SectionHeader title="Agentes" />
-      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
-      <div className="admin-workspace two-columns">
-        <form className="admin-form" onSubmit={submitForm}>
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Agentes</span>
+            <h3>{editingId ? 'Editar agente' : 'Nuevo agente'}</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form className="compact-admin-form" onSubmit={onSubmit}>
           <input
             value={formData.name}
             onChange={(event) => setFormData({ ...formData, name: event.target.value })}
@@ -880,76 +584,46 @@ export const AdminAgentsPage = () => {
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
           </select>
-          <button type="submit" className="primary-button" disabled={!canCreate}>
-            {editingId ? 'Actualizar agente' : 'Crear agente'}
-          </button>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              {editingId ? 'Actualizar agente' : 'Crear agente'}
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
         </form>
-        <div className="admin-panel">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Agente</th>
-                <th>Especialidad</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((agent) => (
-                <tr key={agent.id}>
-                  <td>{agent.name}</td>
-                  <td>{agent.specialty}</td>
-                  <td>{agent.status}</td>
-                  <td>
-                    <CrudActions
-                      onEdit={() => {
-                        setEditingId(agent.id);
-                        setFormData(agent);
-                      }}
-                      onDelete={() => deleteAgent(agent.id)}
-                      canEdit={canCreate}
-                      canDelete={canDelete}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
 };
 
-export const AdminTypesPage = () => {
-  const { hasPermission } = useContext(AuthContext);
-  const { propertyTypes, savePropertyType, deletePropertyType, isLoading } = useRealEstate();
-  const canCreate = hasPermission('TiposPropiedad', 'CREAR');
-  const canDelete = hasPermission('TiposPropiedad', 'ELIMINAR');
-  const [formData, setFormData] = useState(emptyType);
-  const [editingId, setEditingId] = useState(null);
-
-  if (isLoading) {
-    return <div className="admin-page"><h2>Cargando tipos...</h2></div>;
+const TypeFormModal = ({
+  isOpen,
+  editingId,
+  formData,
+  setFormData,
+  canCreate,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) {
+    return null;
   }
 
   return (
-    <div className="admin-page">
-      <SectionHeader title="Tipos de propiedad" />
-      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
-      <div className="admin-workspace two-columns">
-        <form
-          className="admin-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!canCreate) {
-              return;
-            }
-            savePropertyType({ ...formData, id: editingId });
-            setFormData(emptyType);
-            setEditingId(null);
-          }}
-        >
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Tipos</span>
+            <h3>{editingId ? 'Editar tipo de propiedad' : 'Nuevo tipo de propiedad'}</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form className="compact-admin-form" onSubmit={onSubmit}>
           <input
             value={formData.name}
             onChange={(event) => setFormData({ ...formData, name: event.target.value })}
@@ -965,74 +639,46 @@ export const AdminTypesPage = () => {
             required
             disabled={!canCreate}
           />
-          <button type="submit" className="primary-button" disabled={!canCreate}>
-            {editingId ? 'Actualizar tipo' : 'Crear tipo'}
-          </button>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              {editingId ? 'Actualizar tipo' : 'Crear tipo'}
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
         </form>
-        <div className="admin-panel">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Tipo</th>
-                <th>Descripcion</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {propertyTypes.map((type) => (
-                <tr key={type.id}>
-                  <td>{type.name}</td>
-                  <td>{type.description}</td>
-                  <td>
-                    <CrudActions
-                      onEdit={() => {
-                        setEditingId(type.id);
-                        setFormData(type);
-                      }}
-                      onDelete={() => deletePropertyType(type.id)}
-                      canEdit={canCreate}
-                      canDelete={canDelete}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
 };
 
-export const AdminZonesPage = () => {
-  const { hasPermission } = useContext(AuthContext);
-  const { zones, saveZone, deleteZone, isLoading } = useRealEstate();
-  const canCreate = hasPermission('Zonas', 'CREAR');
-  const canDelete = hasPermission('Zonas', 'ELIMINAR');
-  const [formData, setFormData] = useState(emptyZone);
-  const [editingId, setEditingId] = useState(null);
-
-  if (isLoading) {
-    return <div className="admin-page"><h2>Cargando zonas...</h2></div>;
+const ZoneFormModal = ({
+  isOpen,
+  editingId,
+  formData,
+  setFormData,
+  canCreate,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) {
+    return null;
   }
 
   return (
-    <div className="admin-page">
-      <SectionHeader title="Ciudades o zonas" />
-      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
-      <div className="admin-workspace two-columns">
-        <form
-          className="admin-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!canCreate) {
-              return;
-            }
-            saveZone({ ...formData, id: editingId });
-            setFormData(emptyZone);
-            setEditingId(null);
-          }}
-        >
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Zonas</span>
+            <h3>{editingId ? 'Editar ciudad o zona' : 'Nueva ciudad o zona'}</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form className="compact-admin-form" onSubmit={onSubmit}>
           <input
             value={formData.name}
             onChange={(event) => setFormData({ ...formData, name: event.target.value })}
@@ -1055,41 +701,673 @@ export const AdminZonesPage = () => {
             required
             disabled={!canCreate}
           />
-          <button type="submit" className="primary-button" disabled={!canCreate}>
-            {editingId ? 'Actualizar zona' : 'Crear zona'}
-          </button>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              {editingId ? 'Actualizar zona' : 'Crear zona'}
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+export const AdminDashboardPage = () => {
+  const {
+    properties,
+    agents,
+    propertyTypes,
+    zones,
+    contacts,
+    sales,
+    commissions,
+    plans,
+    subscriptions,
+    publicationPayments,
+    isLoading,
+  } = useRealEstate();
+
+  if (isLoading) {
+    return <div className="admin-page"><h2>Cargando dashboard...</h2></div>;
+  }
+
+  const activeProperties = properties.filter((property) => property.active).length;
+  const featuredProperties = properties.filter((property) => property.featured).length;
+  const newContacts = contacts.filter((contact) => contact.status === 'Nuevo').length;
+  const monthlySalesTotal = sales
+    .filter((sale) => String(sale.closingDate).slice(0, 7) === new Date().toISOString().slice(0, 7))
+    .reduce((total, sale) => total + sale.closingPrice, 0);
+  const pendingCommissions = commissions
+    .filter((commission) => commission.status === 'Pendiente')
+    .reduce((total, commission) => total + commission.amount, 0);
+  const publishedProperties = properties.filter(
+    (property) => property.active && property.publicationStatus === 'Publicada'
+  ).length;
+  const monthlySubscriptionRevenue = publicationPayments
+    .filter(
+      (payment) =>
+        payment.status === 'Pagado' &&
+        String(payment.paidAt || payment.createdAt).slice(0, 7) ===
+          new Date().toISOString().slice(0, 7)
+    )
+    .reduce((total, payment) => total + payment.amount, 0);
+
+  return (
+    <div className="admin-page">
+      <SectionHeader
+        eyebrow="Administrativo"
+        title="Dashboard"
+        text="Resumen general de catalogo, visibilidad comercial y solicitudes entrantes."
+      />
+      <div className="admin-stat-grid">
+        <AdminStatCard label="Propiedades activas" value={activeProperties} accent="accent-one" />
+        <AdminStatCard
+          label="Propiedades destacadas"
+          value={featuredProperties}
+          accent="accent-two"
+        />
+        <AdminStatCard label="Solicitudes nuevas" value={newContacts} accent="accent-three" />
+        <AdminStatCard
+          label="Agentes activos"
+          value={agents.filter((agent) => agent.status === 'Activo').length}
+        />
+        <AdminStatCard label="Ventas del mes" value={formatCurrency(monthlySalesTotal, 0)} />
+        <AdminStatCard
+          label="Comisiones pendientes"
+          value={formatCurrency(pendingCommissions, 0)}
+        />
+        <AdminStatCard label="Publicadas" value={publishedProperties} />
+        <AdminStatCard
+          label="Ingresos por suscripcion"
+          value={formatCurrency(monthlySubscriptionRevenue, 0)}
+        />
+      </div>
+      <div className="admin-panel-grid">
         <div className="admin-panel">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Zona</th>
-                <th>Ciudad</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {zones.map((zone) => (
-                <tr key={zone.id}>
-                  <td>{zone.name}</td>
-                  <td>{zone.city}</td>
-                  <td>
-                    <CrudActions
-                      onEdit={() => {
-                        setEditingId(zone.id);
-                        setFormData(zone);
-                      }}
-                      onDelete={() => deleteZone(zone.id)}
-                      canEdit={canCreate}
-                      canDelete={canDelete}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h3>Estado del inventario</h3>
+          <ul className="admin-list">
+            <li>Tipos de propiedad: {propertyTypes.length}</li>
+            <li>Zonas o ciudades: {zones.length}</li>
+            <li>Propiedades publicadas: {publishedProperties}</li>
+            <li>Propiedades ocultas: {properties.length - activeProperties}</li>
+            <li>Planes activos: {plans.filter((plan) => plan.active).length}</li>
+          </ul>
+        </div>
+        <div className="admin-panel">
+          <h3>Seguimiento comercial</h3>
+          <ul className="admin-list">
+            <li>Suscripciones activas: {subscriptions.filter((item) => item.status === 'Activa').length}</li>
+            <li>Pagos pendientes: {publicationPayments.filter((item) => item.status === 'Pendiente').length}</li>
+            {contacts.slice(0, 5).map((contact) => (
+              <li key={contact.id}>
+                <strong>{contact.name}</strong> - {contact.status}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
+    </div>
+  );
+};
+
+export const AdminPropertiesPage = () => {
+  const { hasPermission, user } = useContext(AuthContext);
+  const {
+    agents,
+    createSale,
+    properties,
+    propertyTypes,
+    zones,
+    isLoading,
+    saveProperty,
+    deleteProperty,
+    togglePropertyActive,
+    togglePropertyFeatured,
+  } = useRealEstate();
+  const canCreate = hasPermission('Propiedades', 'CREAR');
+  const canDelete = hasPermission('Propiedades', 'ELIMINAR');
+  const canCreateSales = hasPermission('Ventas', 'CREAR');
+  const [formData, setFormData] = useState(emptyProperty);
+  const [editingId, setEditingId] = useState(null);
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
+  const [imageError, setImageError] = useState('');
+  const [saleProperty, setSaleProperty] = useState(null);
+  const [saleForm, setSaleForm] = useState(createEmptySaleClosure());
+
+  const propertyImagePreviews = useMemo(
+    () => formData.images.filter(Boolean),
+    [formData.images]
+  );
+
+  const normalizeFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    const oversized = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
+
+    if (oversized) {
+      throw new Error(`La imagen ${oversized.name} supera el limite de 3 MB.`);
+    }
+
+    return Promise.all(
+      files.map(async (file) => {
+        const imageBase64 = await readFileAsDataUrl(file);
+        const response = await uploadApi.post('/uploads/preview-base64', {
+          fileName: file.name,
+          imageBase64,
+        });
+        return response.data.previewUrl;
+      })
+    );
+  };
+
+  const handleCoverFileChange = async (event) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles?.length) {
+      return;
+    }
+
+    try {
+      setImageError('');
+      const [coverDataUrl] = await normalizeFiles(selectedFiles);
+      setFormData((current) => ({ ...current, coverImage: coverDataUrl }));
+    } catch (error) {
+      setImageError(error.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleGalleryFileChange = async (event) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles?.length) {
+      return;
+    }
+
+    try {
+      setImageError('');
+      const galleryImages = await normalizeFiles(selectedFiles);
+      setFormData((current) => {
+        const nextImages = [...current.images.filter(Boolean), ...galleryImages];
+        return {
+          ...current,
+          coverImage: current.coverImage || galleryImages[0] || '',
+          images: nextImages,
+        };
+      });
+    } catch (error) {
+      setImageError(error.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const editProperty = (property) => {
+    setEditingId(property.id);
+    setImageError('');
+    setFormData({
+      ...property,
+      typeId: String(property.typeId),
+      zoneId: String(property.zoneId),
+      agentId: String(property.agentId),
+      price: String(property.price),
+      bedrooms: String(property.bedrooms),
+      bathrooms: String(property.bathrooms),
+      parking: String(property.parking),
+      area: String(property.area),
+      images: property.images.length ? property.images : [''],
+    });
+    setIsPropertyModalOpen(true);
+  };
+
+  const closePropertyModal = () => {
+    setIsPropertyModalOpen(false);
+    setEditingId(null);
+    setImageError('');
+    setFormData(emptyProperty);
+  };
+
+  const openNewPropertyModal = () => {
+    setEditingId(null);
+    setImageError('');
+    setFormData(emptyProperty);
+    setIsPropertyModalOpen(true);
+  };
+
+  const openSaleModal = (property) => {
+    setSaleProperty(property);
+    setSaleForm({
+      ...createEmptySaleClosure(),
+      propertyId: String(property.id),
+      agentId: String(property.agentId || ''),
+      closingPrice: String(property.price || ''),
+      businessType: property.operation,
+    });
+  };
+
+  const closeSaleModal = () => {
+    setSaleProperty(null);
+    setSaleForm(createEmptySaleClosure());
+  };
+
+  const submitSale = async (event) => {
+    event.preventDefault();
+    if (!saleProperty) {
+      return;
+    }
+
+    await createSale({
+      ...saleForm,
+      propertyId: saleProperty.id,
+      userId: user?.CODIGO || null,
+    });
+    closeSaleModal();
+  };
+
+  const submitForm = async (event) => {
+    event.preventDefault();
+    if (!canCreate) {
+      return;
+    }
+    setImageError('');
+    const fallbackCoverImage = formData.coverImage || formData.images.find(Boolean) || '';
+    await saveProperty({ ...formData, id: editingId, coverImage: fallbackCoverImage });
+    closePropertyModal();
+  };
+
+  if (isLoading) {
+    return <div className="admin-page"><h2>Cargando propiedades...</h2></div>;
+  }
+
+  return (
+    <div className="admin-page">
+      <SectionHeader
+        title="Propiedades"
+        text="Administra el inventario inmobiliario desde un listado central con acciones rapidas."
+      />
+      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      {imageError && <div className="feedback-banner error">{imageError}</div>}
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Propiedades registradas</span>
+          <strong>{properties.length}</strong>
+        </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openNewPropertyModal}>
+            Nueva propiedad
+          </button>
+        )}
+      </div>
+      <div className="admin-panel">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Propiedad</th>
+              <th>Tipo</th>
+              <th>Zona</th>
+              <th>Estado comercial</th>
+              <th>Publicacion</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {properties.map((property) => (
+              <tr key={property.id}>
+                <td data-label="Propiedad">{property.title}</td>
+                <td data-label="Tipo">{property.type?.name}</td>
+                <td data-label="Zona">{property.zone?.name}</td>
+                <td data-label="Estado comercial">{property.commercialStatus}</td>
+                <td data-label="Publicacion">{property.publicationStatus}</td>
+                <td data-label="Estado">{property.active ? 'Activa' : 'Inactiva'}</td>
+                <td data-label="Acciones">
+                  <CrudActions
+                    onEdit={() => editProperty(property)}
+                    onDelete={() => deleteProperty(property.id)}
+                    canEdit={canCreate}
+                    canDelete={canDelete}
+                  >
+                    {canCreate && (
+                      <button
+                        type="button"
+                        className="table-button"
+                        onClick={() => togglePropertyFeatured(property.id)}
+                      >
+                        {property.featured ? 'Quitar destacada' : 'Destacar'}
+                      </button>
+                    )}
+                    {canCreate && (
+                      <button
+                        type="button"
+                        className="table-button"
+                        onClick={() => togglePropertyActive(property.id)}
+                      >
+                        {property.active ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
+                    {canCreateSales && property.commercialStatus === 'Disponible' && (
+                      <button
+                        type="button"
+                        className="table-button"
+                        onClick={() => openSaleModal(property)}
+                      >
+                        {property.operation === 'Renta' ? 'Cerrar renta' : 'Cerrar venta'}
+                      </button>
+                    )}
+                  </CrudActions>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <PropertyFormModal
+        isOpen={isPropertyModalOpen}
+        editingId={editingId}
+        canCreate={canCreate}
+        formData={formData}
+        setFormData={setFormData}
+        propertyTypes={propertyTypes}
+        zones={zones}
+        agents={agents}
+        handleCoverFileChange={handleCoverFileChange}
+        handleGalleryFileChange={handleGalleryFileChange}
+        propertyImagePreviews={propertyImagePreviews}
+        imageError={imageError}
+        onClose={closePropertyModal}
+        onSubmit={submitForm}
+      />
+      <CloseSaleModal
+        isOpen={Boolean(saleProperty)}
+        property={saleProperty}
+        formData={saleForm}
+        setFormData={setSaleForm}
+        agents={agents}
+        onClose={closeSaleModal}
+        onSubmit={submitSale}
+      />
+    </div>
+  );
+};
+
+export const AdminAgentsPage = () => {
+  const { hasPermission } = useContext(AuthContext);
+  const { agents, saveAgent, deleteAgent, isLoading } = useRealEstate();
+  const canCreate = hasPermission('Agentes', 'CREAR');
+  const canDelete = hasPermission('Agentes', 'ELIMINAR');
+  const [formData, setFormData] = useState(emptyAgent);
+  const [editingId, setEditingId] = useState(null);
+  const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
+
+  const closeAgentModal = () => {
+    setFormData(emptyAgent);
+    setEditingId(null);
+    setIsAgentModalOpen(false);
+  };
+
+  const openNewAgentModal = () => {
+    setFormData(emptyAgent);
+    setEditingId(null);
+    setIsAgentModalOpen(true);
+  };
+
+  const submitForm = async (event) => {
+    event.preventDefault();
+    if (!canCreate) {
+      return;
+    }
+    await saveAgent({ ...formData, id: editingId });
+    closeAgentModal();
+  };
+
+  if (isLoading) {
+    return <div className="admin-page"><h2>Cargando agentes...</h2></div>;
+  }
+
+  return (
+    <div className="admin-page">
+      <SectionHeader title="Agentes" />
+      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Agentes registrados</span>
+          <strong>{agents.length}</strong>
+        </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openNewAgentModal}>
+            Nuevo agente
+          </button>
+        )}
+      </div>
+      <div className="admin-panel">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Especialidad</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {agents.map((agent) => (
+              <tr key={agent.id}>
+                <td data-label="Agente">{agent.name}</td>
+                <td data-label="Especialidad">{agent.specialty}</td>
+                <td data-label="Estado">{agent.status}</td>
+                <td data-label="Acciones">
+                  <CrudActions
+                    onEdit={() => {
+                      setEditingId(agent.id);
+                      setFormData(agent);
+                      setIsAgentModalOpen(true);
+                    }}
+                    onDelete={() => deleteAgent(agent.id)}
+                    canEdit={canCreate}
+                    canDelete={canDelete}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <AgentFormModal
+        isOpen={isAgentModalOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        canCreate={canCreate}
+        onClose={closeAgentModal}
+        onSubmit={submitForm}
+      />
+    </div>
+  );
+};
+
+export const AdminTypesPage = () => {
+  const { hasPermission } = useContext(AuthContext);
+  const { propertyTypes, savePropertyType, deletePropertyType, isLoading } = useRealEstate();
+  const canCreate = hasPermission('TiposPropiedad', 'CREAR');
+  const canDelete = hasPermission('TiposPropiedad', 'ELIMINAR');
+  const [formData, setFormData] = useState(emptyType);
+  const [editingId, setEditingId] = useState(null);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+
+  const closeTypeModal = () => {
+    setFormData(emptyType);
+    setEditingId(null);
+    setIsTypeModalOpen(false);
+  };
+
+  const openNewTypeModal = () => {
+    setFormData(emptyType);
+    setEditingId(null);
+    setIsTypeModalOpen(true);
+  };
+
+  const submitTypeForm = async (event) => {
+    event.preventDefault();
+    if (!canCreate) {
+      return;
+    }
+    await savePropertyType({ ...formData, id: editingId });
+    closeTypeModal();
+  };
+
+  if (isLoading) {
+    return <div className="admin-page"><h2>Cargando tipos...</h2></div>;
+  }
+
+  return (
+    <div className="admin-page">
+      <SectionHeader title="Tipos de propiedad" />
+      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Tipos registrados</span>
+          <strong>{propertyTypes.length}</strong>
+        </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openNewTypeModal}>
+            Nuevo tipo
+          </button>
+        )}
+      </div>
+      <div className="admin-panel">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Descripcion</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {propertyTypes.map((type) => (
+              <tr key={type.id}>
+                <td data-label="Tipo">{type.name}</td>
+                <td data-label="Descripcion">{type.description}</td>
+                <td data-label="Acciones">
+                  <CrudActions
+                    onEdit={() => {
+                      setEditingId(type.id);
+                      setFormData(type);
+                      setIsTypeModalOpen(true);
+                    }}
+                    onDelete={() => deletePropertyType(type.id)}
+                    canEdit={canCreate}
+                    canDelete={canDelete}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <TypeFormModal
+        isOpen={isTypeModalOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        canCreate={canCreate}
+        onClose={closeTypeModal}
+        onSubmit={submitTypeForm}
+      />
+    </div>
+  );
+};
+
+export const AdminZonesPage = () => {
+  const { hasPermission } = useContext(AuthContext);
+  const { zones, saveZone, deleteZone, isLoading } = useRealEstate();
+  const canCreate = hasPermission('Zonas', 'CREAR');
+  const canDelete = hasPermission('Zonas', 'ELIMINAR');
+  const [formData, setFormData] = useState(emptyZone);
+  const [editingId, setEditingId] = useState(null);
+  const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
+
+  const closeZoneModal = () => {
+    setFormData(emptyZone);
+    setEditingId(null);
+    setIsZoneModalOpen(false);
+  };
+
+  const openNewZoneModal = () => {
+    setFormData(emptyZone);
+    setEditingId(null);
+    setIsZoneModalOpen(true);
+  };
+
+  const submitZoneForm = async (event) => {
+    event.preventDefault();
+    if (!canCreate) {
+      return;
+    }
+    await saveZone({ ...formData, id: editingId });
+    closeZoneModal();
+  };
+
+  if (isLoading) {
+    return <div className="admin-page"><h2>Cargando zonas...</h2></div>;
+  }
+
+  return (
+    <div className="admin-page">
+      <SectionHeader title="Ciudades o zonas" />
+      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Zonas registradas</span>
+          <strong>{zones.length}</strong>
+        </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openNewZoneModal}>
+            Nueva zona
+          </button>
+        )}
+      </div>
+      <div className="admin-panel">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Zona</th>
+              <th>Ciudad</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {zones.map((zone) => (
+              <tr key={zone.id}>
+                <td data-label="Zona">{zone.name}</td>
+                <td data-label="Ciudad">{zone.city}</td>
+                <td data-label="Acciones">
+                  <CrudActions
+                    onEdit={() => {
+                      setEditingId(zone.id);
+                      setFormData(zone);
+                      setIsZoneModalOpen(true);
+                    }}
+                    onDelete={() => deleteZone(zone.id)}
+                    canEdit={canCreate}
+                    canDelete={canDelete}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ZoneFormModal
+        isOpen={isZoneModalOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        canCreate={canCreate}
+        onClose={closeZoneModal}
+        onSubmit={submitZoneForm}
+      />
     </div>
   );
 };
@@ -1169,17 +1447,17 @@ export const AdminContactsPage = () => {
           </thead>
           <tbody>
             {contacts.map((contact) => (
-              <tr key={contact.id}>
-                <td>
+                <tr key={contact.id}>
+                <td data-label="Cliente">
                   <strong>{contact.name}</strong>
                   <div>{contact.phone}</div>
                   <div>{contact.email}</div>
                 </td>
-                <td>
+                <td data-label="Propiedad">
                   {contact.propertyId ? propertyNameById[contact.propertyId] : 'Consulta general'}
                 </td>
-                <td>{contact.message}</td>
-                <td>
+                <td data-label="Mensaje">{contact.message}</td>
+                <td data-label="Estado">
                   <select
                     value={contact.status}
                     onChange={(event) => updateContactStatus(contact.id, event.target.value)}

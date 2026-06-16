@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const usuarioRoutes = require('./routes/usuarios');
 const securityRoutes = require('./routes/security');
@@ -26,6 +27,26 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuración de CORS
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://globaljm.cloud',
+  'https://www.globaljm.cloud',
+];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origen no permitido por CORS: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
 app.use(bodyParser.json({ limit: '15mb' }));
 
 app.use('/usuarios', usuarioRoutes);

@@ -1,6 +1,7 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from './AuthContext';
 import { useRealEstate } from '../../contexts/RealEstateContext';
+import AdminPagination from '../common/AdminPagination';
 
 const currencyFormatter = new Intl.NumberFormat('es-HN', {
   style: 'currency',
@@ -93,6 +94,37 @@ const AdminModalShell = ({ chip, title, isOpen, onClose, children, wide = false 
   );
 };
 
+const useAdminPagination = (items, initialPageSize = 10) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(initialPageSize);
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return items.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, items, itemsPerPage]);
+
+  const updateItemsPerPage = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
+
+  return {
+    currentPage,
+    itemsPerPage,
+    totalPages,
+    paginatedItems,
+    setCurrentPage,
+    setItemsPerPage: updateItemsPerPage,
+  };
+};
+
 export const AdminPlansPage = () => {
   const { hasPermission } = useContext(AuthContext);
   const { plans, savePlan, deletePlan, isLoading } = useRealEstate();
@@ -101,6 +133,7 @@ export const AdminPlansPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [formData, setFormData] = useState(basePlanForm);
+  const pagination = useAdminPagination(plans);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -174,20 +207,20 @@ export const AdminPlansPage = () => {
             </tr>
           </thead>
           <tbody>
-            {plans.map((plan) => (
-              <tr key={plan.id}>
-                <td>
+            {pagination.paginatedItems.map((plan) => (
+                <tr key={plan.id}>
+                <td data-label="Plan">
                   <strong>{plan.name}</strong>
                   <div>{plan.description}</div>
                 </td>
-                <td>{formatMoney(plan.price)}</td>
-                <td>{plan.durationDays} dias</td>
-                <td>
+                <td data-label="Precio">{formatMoney(plan.price)}</td>
+                <td data-label="Duracion">{plan.durationDays} dias</td>
+                <td data-label="Imagenes">
                   {plan.imageLimit}
                   {plan.allowsFeatured ? ' + destacada' : ''}
                 </td>
-                <td>{plan.priorityLevel}</td>
-                <td>
+                <td data-label="Prioridad">{plan.priorityLevel}</td>
+                <td data-label="Acciones">
                   <div className="table-actions">
                     {canCreate && (
                       <button
@@ -213,6 +246,14 @@ export const AdminPlansPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={plans.length}
+          itemsPerPage={pagination.itemsPerPage}
+          onPageChange={pagination.setCurrentPage}
+          onItemsPerPageChange={pagination.setItemsPerPage}
+        />
       </div>
       <AdminModalShell
         chip="Planes"
@@ -313,6 +354,7 @@ export const AdminSubscriptionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState(null);
   const [formData, setFormData] = useState(baseSubscriptionForm);
+  const pagination = useAdminPagination(subscriptions);
 
   const visibleProperties = useMemo(
     () => properties.filter((property) => property.commercialStatus === 'Disponible'),
@@ -426,26 +468,26 @@ export const AdminSubscriptionsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {subscriptions.map((subscription) => (
-              <tr key={subscription.id}>
-                <td>
+            {pagination.paginatedItems.map((subscription) => (
+                <tr key={subscription.id}>
+                <td data-label="Propiedad">
                   <strong>{subscription.propertyTitle}</strong>
                   <div>{subscription.propertyPublicationStatus}</div>
                 </td>
-                <td>
+                <td data-label="Plan">
                   <strong>{subscription.planName}</strong>
                   <div>{formatMoney(subscription.finalPrice)}</div>
                 </td>
-                <td>
+                <td data-label="Vigencia">
                   <strong>{String(subscription.startDate).slice(0, 10)}</strong>
                   <div>Hasta {String(subscription.endDate).slice(0, 10)}</div>
                 </td>
-                <td>{subscription.status}</td>
-                <td>
+                <td data-label="Estado">{subscription.status}</td>
+                <td data-label="Pagado">
                   <strong>{formatMoney(subscription.totalPaid)}</strong>
                   <div>{subscription.totalPayments} pagos</div>
                 </td>
-                <td>
+                <td data-label="Acciones">
                   <div className="table-actions">
                     {canCreate && (
                       <button
@@ -471,6 +513,14 @@ export const AdminSubscriptionsPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={subscriptions.length}
+          itemsPerPage={pagination.itemsPerPage}
+          onPageChange={pagination.setCurrentPage}
+          onItemsPerPageChange={pagination.setItemsPerPage}
+        />
       </div>
       <AdminModalShell
         chip="Suscripciones"
@@ -606,6 +656,7 @@ export const AdminPublicationPaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [formData, setFormData] = useState(basePaymentForm);
+  const pagination = useAdminPagination(publicationPayments);
 
   const summary = useMemo(
     () => ({
@@ -700,17 +751,17 @@ export const AdminPublicationPaymentsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {publicationPayments.map((payment) => (
-              <tr key={payment.id}>
-                <td>
+            {pagination.paginatedItems.map((payment) => (
+                <tr key={payment.id}>
+                <td data-label="Propiedad">
                   <strong>{payment.propertyTitle}</strong>
                   <div>{payment.subscriptionStatus}</div>
                 </td>
-                <td>{payment.planName}</td>
-                <td>{formatMoney(payment.amount)}</td>
-                <td>{payment.status}</td>
-                <td>{payment.reference || 'Sin referencia'}</td>
-                <td>
+                <td data-label="Plan">{payment.planName}</td>
+                <td data-label="Monto">{formatMoney(payment.amount)}</td>
+                <td data-label="Estado">{payment.status}</td>
+                <td data-label="Referencia">{payment.reference || 'Sin referencia'}</td>
+                <td data-label="Acciones">
                   <div className="table-actions">
                     {canCreate && (
                       <button
@@ -736,6 +787,14 @@ export const AdminPublicationPaymentsPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={publicationPayments.length}
+          itemsPerPage={pagination.itemsPerPage}
+          onPageChange={pagination.setCurrentPage}
+          onItemsPerPageChange={pagination.setItemsPerPage}
+        />
       </div>
       <AdminModalShell
         chip="Pagos"

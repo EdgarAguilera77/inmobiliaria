@@ -120,6 +120,136 @@ const RoleEditModal = ({
   );
 };
 
+const UserEditModal = ({
+  isOpen,
+  editingId,
+  formData,
+  setFormData,
+  roles,
+  services,
+  canCreate,
+  onClose,
+  onSubmit,
+}) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal admin-modal-wide" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Usuarios</span>
+            <h3>{editingId ? 'Editar usuario' : 'Nuevo usuario'}</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form className="compact-admin-form" onSubmit={onSubmit}>
+          <input
+            value={formData.NOMBRE}
+            onChange={(event) => setFormData({ ...formData, NOMBRE: event.target.value })}
+            placeholder="Nombre completo"
+            required
+            disabled={!canCreate}
+          />
+          <input
+            value={formData.IDENTIFICACION}
+            onChange={(event) => setFormData({ ...formData, IDENTIFICACION: event.target.value })}
+            placeholder="Identificacion"
+            required
+            disabled={!canCreate}
+          />
+          <input
+            type="email"
+            value={formData.CORREO}
+            onChange={(event) => setFormData({ ...formData, CORREO: event.target.value })}
+            placeholder="Correo"
+            required
+            disabled={!canCreate}
+          />
+          <input
+            value={formData.TELEFONO}
+            onChange={(event) => setFormData({ ...formData, TELEFONO: event.target.value })}
+            placeholder="Telefono"
+            required
+            disabled={!canCreate}
+          />
+          <input
+            type="password"
+            value={formData.PASSWORD}
+            onChange={(event) => setFormData({ ...formData, PASSWORD: event.target.value })}
+            placeholder={editingId ? 'Nueva contrasena opcional' : 'Contrasena temporal'}
+            disabled={!canCreate}
+          />
+          <div className="admin-form-row">
+            <select
+              value={formData.ID_ROL}
+              onChange={(event) => setFormData({ ...formData, ID_ROL: event.target.value })}
+              required
+              disabled={!canCreate}
+            >
+              <option value="">Rol</option>
+              {roles.map((role) => (
+                <option key={role.ID_ROL} value={role.ID_ROL}>
+                  {role.NOMBRE_ROL}
+                </option>
+              ))}
+            </select>
+            {false && (
+              <select
+                value={formData.ID_SERVICIO}
+                onChange={(event) => setFormData({ ...formData, ID_SERVICIO: event.target.value })}
+                required
+                disabled={!canCreate}
+              >
+                <option value="">Servicio</option>
+                {services.map((service) => (
+                  <option key={service.ID_SERVICIO} value={service.ID_SERVICIO}>
+                    {service.NOMBRE_SERVICIO}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <select
+            value={formData.ESTADO}
+            onChange={(event) => setFormData({ ...formData, ESTADO: Number(event.target.value) })}
+            disabled={!canCreate}
+          >
+            <option value={1}>Activo</option>
+            <option value={0}>Inactivo</option>
+          </select>
+          <label className="checkbox-row single-checkbox-row">
+            <input
+              type="checkbox"
+              checked={Number(formData.REQUIERE_ACEPTACION_TERMINOS) === 1}
+              onChange={(event) =>
+                setFormData({
+                  ...formData,
+                  REQUIERE_ACEPTACION_TERMINOS: event.target.checked ? 1 : 0,
+                })
+              }
+              disabled={!canCreate}
+            />
+            <span>Solicitar aceptacion de terminos en el primer ingreso</span>
+          </label>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              {editingId ? 'Actualizar usuario' : 'Crear usuario'}
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const PermissionsModal = ({
   isOpen,
   onClose,
@@ -220,9 +350,16 @@ export const AdminUsersPage = () => {
   const [services, setServices] = useState([]);
   const [formData, setFormData] = useState(emptyUser);
   const [editingId, setEditingId] = useState(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
+  const getDefaultServiceId = () =>
+    String(
+      services.find((service) => service.NOMBRE_SERVICIO === 'Informatica')?.ID_SERVICIO ||
+      services[0]?.ID_SERVICIO ||
+      ''
+    );
 
   const loadSecurityData = async () => {
     setIsLoading(true);
@@ -241,10 +378,13 @@ export const AdminUsersPage = () => {
       setUsers(usersResponse.data.map(mapUser));
       setRoles(availableRoles);
       setServices(availableServices);
+      const defaultService =
+        availableServices.find((service) => service.NOMBRE_SERVICIO === 'Informatica') ||
+        availableServices[0];
       setFormData((current) => ({
         ...current,
         ID_ROL: current.ID_ROL || String(availableRoles[0]?.ID_ROL || ''),
-        ID_SERVICIO: current.ID_SERVICIO || String(availableServices[0]?.ID_SERVICIO || ''),
+        ID_SERVICIO: current.ID_SERVICIO || String(defaultService?.ID_SERVICIO || ''),
       }));
     } catch (requestError) {
       console.error('Error al cargar seguridad:', requestError);
@@ -262,9 +402,19 @@ export const AdminUsersPage = () => {
     setFormData({
       ...emptyUser,
       ID_ROL: String(roles[0]?.ID_ROL || ''),
-      ID_SERVICIO: String(services[0]?.ID_SERVICIO || ''),
+      ID_SERVICIO: getDefaultServiceId(),
     });
     setEditingId(null);
+  };
+
+  const closeUserModal = () => {
+    resetForm();
+    setIsUserModalOpen(false);
+  };
+
+  const openNewUserModal = () => {
+    resetForm();
+    setIsUserModalOpen(true);
   };
 
   const handleSubmit = async (event) => {
@@ -279,7 +429,7 @@ export const AdminUsersPage = () => {
     const payload = {
       ...formData,
       ID_ROL: Number(formData.ID_ROL),
-      ID_SERVICIO: Number(formData.ID_SERVICIO),
+      ID_SERVICIO: Number(formData.ID_SERVICIO || getDefaultServiceId()),
       ESTADO: Number(formData.ESTADO),
       REQUIERE_ACEPTACION_TERMINOS: Number(formData.REQUIERE_ACEPTACION_TERMINOS),
     };
@@ -303,7 +453,7 @@ export const AdminUsersPage = () => {
       }
 
       await loadSecurityData();
-      resetForm();
+      closeUserModal();
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'No se pudo guardar el usuario.');
     }
@@ -322,10 +472,11 @@ export const AdminUsersPage = () => {
       TELEFONO: selectedUser.TELEFONO,
       PASSWORD: '',
       ID_ROL: String(selectedUser.ID_ROL),
-      ID_SERVICIO: String(selectedUser.ID_SERVICIO),
+      ID_SERVICIO: String(selectedUser.ID_SERVICIO || getDefaultServiceId()),
       ESTADO: Number(selectedUser.ESTADO),
       REQUIERE_ACEPTACION_TERMINOS: Number(selectedUser.REQUIERE_ACEPTACION_TERMINOS || 0),
     });
+    setIsUserModalOpen(true);
   };
 
   const removeUser = async (codigo) => {
@@ -362,161 +513,77 @@ export const AdminUsersPage = () => {
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       {error && <div className="feedback-banner error">{error}</div>}
       {feedback && <div className="feedback-banner success">{feedback}</div>}
-      <div className="admin-workspace">
-        <form className="admin-form" onSubmit={handleSubmit}>
-          <input
-            value={formData.NOMBRE}
-            onChange={(event) => setFormData({ ...formData, NOMBRE: event.target.value })}
-            placeholder="Nombre completo"
-            required
-            disabled={!canCreate}
-          />
-          <input
-            value={formData.IDENTIFICACION}
-            onChange={(event) => setFormData({ ...formData, IDENTIFICACION: event.target.value })}
-            placeholder="Identificacion"
-            required
-            disabled={!canCreate}
-          />
-          <input
-            type="email"
-            value={formData.CORREO}
-            onChange={(event) => setFormData({ ...formData, CORREO: event.target.value })}
-            placeholder="Correo"
-            required
-            disabled={!canCreate}
-          />
-          <input
-            value={formData.TELEFONO}
-            onChange={(event) => setFormData({ ...formData, TELEFONO: event.target.value })}
-            placeholder="Telefono"
-            required
-            disabled={!canCreate}
-          />
-          <input
-            type="password"
-            value={formData.PASSWORD}
-            onChange={(event) => setFormData({ ...formData, PASSWORD: event.target.value })}
-            placeholder={editingId ? 'Nueva contrasena opcional' : 'Contrasena temporal'}
-            disabled={!canCreate}
-          />
-          <div className="admin-form-row">
-            <select
-              value={formData.ID_ROL}
-              onChange={(event) => setFormData({ ...formData, ID_ROL: event.target.value })}
-              required
-              disabled={!canCreate}
-            >
-              <option value="">Rol</option>
-              {roles.map((role) => (
-                <option key={role.ID_ROL} value={role.ID_ROL}>
-                  {role.NOMBRE_ROL}
-                </option>
-              ))}
-            </select>
-            <select
-              value={formData.ID_SERVICIO}
-              onChange={(event) => setFormData({ ...formData, ID_SERVICIO: event.target.value })}
-              required
-              disabled={!canCreate}
-            >
-              <option value="">Servicio</option>
-              {services.map((service) => (
-                <option key={service.ID_SERVICIO} value={service.ID_SERVICIO}>
-                  {service.NOMBRE_SERVICIO}
-                </option>
-              ))}
-            </select>
-          </div>
-          <select
-            value={formData.ESTADO}
-            onChange={(event) => setFormData({ ...formData, ESTADO: Number(event.target.value) })}
-            disabled={!canCreate}
-          >
-            <option value={1}>Activo</option>
-            <option value={0}>Inactivo</option>
-          </select>
-          <label className="checkbox-row single-checkbox-row">
-            <input
-              type="checkbox"
-              checked={Number(formData.REQUIERE_ACEPTACION_TERMINOS) === 1}
-              onChange={(event) =>
-                setFormData({
-                  ...formData,
-                  REQUIERE_ACEPTACION_TERMINOS: event.target.checked ? 1 : 0,
-                })
-              }
-              disabled={!canCreate}
-            />
-            <span>Solicitar aceptacion de terminos en el primer ingreso</span>
-          </label>
-          <div className="table-actions">
-            <button type="submit" className="primary-button" disabled={!canCreate}>
-              {editingId ? 'Actualizar usuario' : 'Crear usuario'}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={resetForm}
-              disabled={!canCreate}
-            >
-              Limpiar
-            </button>
-          </div>
-        </form>
-
-        <div className="admin-panel">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Rol</th>
-                <th>Servicio</th>
-                <th>Estado</th>
-                <th>Primer ingreso</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((listedUser) => (
-                <tr key={listedUser.CODIGO}>
-                  <td>
-                    <strong>{listedUser.NOMBRE}</strong>
-                    <div>{listedUser.CORREO}</div>
-                    <div>{listedUser.TELEFONO}</div>
-                  </td>
-                  <td>{listedUser.NOMBRE_ROL}</td>
-                  <td>{listedUser.NOMBRE_SERVICIO}</td>
-                  <td>{Number(listedUser.ESTADO) === 1 ? 'Activo' : 'Inactivo'}</td>
-                  <td>
-                    {Number(listedUser.REQUIERE_ACEPTACION_TERMINOS) === 1
-                      ? 'Pendiente de aceptar'
-                      : 'Aceptado o no requerido'}
-                  </td>
-                  <td>
-                    <div className="table-actions">
-                      {canCreate && (
-                        <ActionButton onClick={() => editUser(listedUser)} tone="ghost">
-                          Editar
-                        </ActionButton>
-                      )}
-                      {canDelete && listedUser.CODIGO !== user?.CODIGO && (
-                        <ActionButton
-                          onClick={() => removeUser(listedUser.CODIGO)}
-                          tone="danger"
-                        >
-                          Eliminar
-                        </ActionButton>
-                      )}
-                      {!canCreate && !canDelete && <span className="muted-copy">Solo lectura</span>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="admin-panel-toolbar">
+        <div className="admin-inline-summary">
+          <span>Usuarios registrados</span>
+          <strong>{users.length}</strong>
         </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openNewUserModal}>
+            Nuevo usuario
+          </button>
+        )}
       </div>
+      <div className="admin-panel">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Primer ingreso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((listedUser) => (
+              <tr key={listedUser.CODIGO}>
+                <td data-label="Usuario">
+                  <strong>{listedUser.NOMBRE}</strong>
+                  <div>{listedUser.CORREO}</div>
+                  <div>{listedUser.TELEFONO}</div>
+                </td>
+                <td data-label="Rol">{listedUser.NOMBRE_ROL}</td>
+                <td data-label="Estado">{Number(listedUser.ESTADO) === 1 ? 'Activo' : 'Inactivo'}</td>
+                <td data-label="Primer ingreso">
+                  {Number(listedUser.REQUIERE_ACEPTACION_TERMINOS) === 1
+                    ? 'Pendiente de aceptar'
+                    : 'Aceptado o no requerido'}
+                </td>
+                <td data-label="Acciones">
+                  <div className="table-actions">
+                    {canCreate && (
+                      <ActionButton onClick={() => editUser(listedUser)} tone="ghost">
+                        Editar
+                      </ActionButton>
+                    )}
+                    {canDelete && listedUser.CODIGO !== user?.CODIGO && (
+                      <ActionButton
+                        onClick={() => removeUser(listedUser.CODIGO)}
+                        tone="danger"
+                      >
+                        Eliminar
+                      </ActionButton>
+                    )}
+                    {!canCreate && !canDelete && <span className="muted-copy">Solo lectura</span>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <UserEditModal
+        isOpen={isUserModalOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        roles={roles}
+        services={services}
+        canCreate={canCreate}
+        onClose={closeUserModal}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 };
@@ -793,16 +860,16 @@ export const AdminRolesPermissionsPage = () => {
                   className={isSelected ? 'role-row-selected' : ''}
                   onClick={() => setSelectedRoleId(String(role.ID_ROL))}
                 >
-                  <td>
+                  <td data-label="Rol">
                     <strong>{role.NOMBRE_ROL}</strong>
                   </td>
-                  <td>
+                  <td data-label="Estado">
                     <span className={`role-status ${role.ESTADO === 1 ? 'active' : 'inactive'}`}>
                       {role.ESTADO === 1 ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td>{isSelected ? `${assignedModules} modulos con acceso VER` : 'Selecciona el rol'}</td>
-                  <td>
+                  <td data-label="Modulos">{isSelected ? `${assignedModules} modulos con acceso VER` : 'Selecciona el rol'}</td>
+                  <td data-label="Acciones">
                     <div className="table-actions">
                       <ActionButton
                         onClick={(event) => {
