@@ -147,13 +147,19 @@ const UserEditModal = ({
             Cerrar
           </button>
         </div>
-        <form className="compact-admin-form" onSubmit={onSubmit}>
+        <form
+          className="compact-admin-form"
+          onSubmit={onSubmit}
+          autoComplete="off"
+        >
           <input
             value={formData.NOMBRE}
             onChange={(event) => setFormData({ ...formData, NOMBRE: event.target.value })}
             placeholder="Nombre completo"
             required
             disabled={!canCreate}
+            autoComplete="off"
+            name="user_full_name"
           />
           <input
             value={formData.IDENTIFICACION}
@@ -161,6 +167,8 @@ const UserEditModal = ({
             placeholder="Identificacion"
             required
             disabled={!canCreate}
+            autoComplete="off"
+            name="user_identity"
           />
           <input
             type="email"
@@ -169,6 +177,8 @@ const UserEditModal = ({
             placeholder="Correo"
             required
             disabled={!canCreate}
+            autoComplete="off"
+            name="user_email"
           />
           <input
             value={formData.TELEFONO}
@@ -176,6 +186,8 @@ const UserEditModal = ({
             placeholder="Telefono"
             required
             disabled={!canCreate}
+            autoComplete="off"
+            name="user_phone"
           />
           <input
             type="password"
@@ -183,6 +195,8 @@ const UserEditModal = ({
             onChange={(event) => setFormData({ ...formData, PASSWORD: event.target.value })}
             placeholder={editingId ? 'Nueva contrasena opcional' : 'Contrasena temporal'}
             disabled={!canCreate}
+            autoComplete={editingId ? 'new-password' : 'new-password'}
+            name="user_new_password"
           />
           <div className="admin-form-row">
             <select
