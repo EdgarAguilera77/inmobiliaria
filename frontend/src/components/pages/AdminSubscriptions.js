@@ -10,6 +10,13 @@ const currencyFormatter = new Intl.NumberFormat('es-HN', {
 });
 
 const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
+const todayString = () => new Date().toISOString().slice(0, 10);
+const addDaysToDateString = (dateValue, daysToAdd) => {
+  const nextDate = new Date(dateValue || todayString());
+  nextDate.setHours(0, 0, 0, 0);
+  nextDate.setDate(nextDate.getDate() + Number(daysToAdd || 0));
+  return nextDate.toISOString().slice(0, 10);
+};
 
 const SectionHeader = ({ title, text }) => (
   <div className="admin-header">
@@ -51,8 +58,8 @@ const baseSubscriptionForm = {
   planId: '',
   agentId: '',
   finalPrice: '',
-  startDate: new Date().toISOString().slice(0, 10),
-  endDate: new Date().toISOString().slice(0, 10),
+  startDate: todayString(),
+  endDate: todayString(),
   status: 'Pendiente de pago',
   autoRenew: false,
   notes: '',
@@ -63,8 +70,8 @@ const basePaymentForm = {
   amount: '',
   paymentMethod: 'Transferencia',
   reference: '',
-  status: 'Pendiente',
-  paidAt: new Date().toISOString().slice(0, 10),
+  status: 'Pagado',
+  paidAt: todayString(),
   notes: '',
 };
 
@@ -355,6 +362,10 @@ export const AdminSubscriptionsPage = () => {
   const [editingSubscription, setEditingSubscription] = useState(null);
   const [formData, setFormData] = useState(baseSubscriptionForm);
   const pagination = useAdminPagination(subscriptions);
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => String(plan.id) === String(formData.planId)),
+    [plans, formData.planId]
+  );
 
   const visibleProperties = useMemo(
     () => properties.filter((property) => property.commercialStatus === 'Disponible'),
@@ -389,7 +400,11 @@ export const AdminSubscriptionsPage = () => {
 
   const openNewModal = () => {
     setEditingSubscription(null);
-    setFormData(baseSubscriptionForm);
+    setFormData({
+      ...baseSubscriptionForm,
+      startDate: todayString(),
+      endDate: todayString(),
+    });
     setIsModalOpen(true);
   };
 
@@ -408,6 +423,28 @@ export const AdminSubscriptionsPage = () => {
     });
     setIsModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!isModalOpen || !selectedPlan) {
+      return;
+    }
+
+    setFormData((current) => {
+      const startDate = current.startDate || todayString();
+      const endDate = addDaysToDateString(startDate, selectedPlan.durationDays);
+      const nextPrice = String(selectedPlan.price || 0);
+
+      if (current.endDate === endDate && current.finalPrice === nextPrice) {
+        return current;
+      }
+
+      return {
+        ...current,
+        finalPrice: nextPrice,
+        endDate,
+      };
+    });
+  }, [isModalOpen, selectedPlan]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -574,39 +611,32 @@ export const AdminSubscriptionsPage = () => {
               ))}
             </select>
             <input
-              value={formData.finalPrice}
-              onChange={(event) => setFormData({ ...formData, finalPrice: event.target.value })}
-              placeholder="Precio final"
-              disabled={!canCreate}
+              value={selectedPlan ? formatMoney(selectedPlan.price) : ''}
+              placeholder="Monto de suscripcion"
+              readOnly
+              disabled
             />
           </div>
           <div className="admin-form-row">
             <input
               type="date"
               value={formData.startDate}
-              onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
+              readOnly
               required
-              disabled={!canCreate}
+              disabled
             />
             <input
               type="date"
               value={formData.endDate}
-              onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
+              readOnly
               required
-              disabled={!canCreate}
+              disabled
             />
           </div>
-          <div className="admin-form-row">
-            <select
-              value={formData.status}
-              onChange={(event) => setFormData({ ...formData, status: event.target.value })}
-              disabled={!canCreate}
-            >
-              <option value="Pendiente de pago">Pendiente de pago</option>
-              <option value="Activa">Activa</option>
-              <option value="Cancelada">Cancelada</option>
-              <option value="Vencida">Vencida</option>
-            </select>
+          <div className="admin-inline-summary stack">
+            <span>Estado de la suscripcion</span>
+            <strong>{editingSubscription?.status || 'Pendiente de pago'}</strong>
+            {selectedPlan && <small>{selectedPlan.durationDays} dias de vigencia segun el plan.</small>}
           </div>
           <textarea
             rows="4"
@@ -657,6 +687,19 @@ export const AdminPublicationPaymentsPage = () => {
   const [editingPayment, setEditingPayment] = useState(null);
   const [formData, setFormData] = useState(basePaymentForm);
   const pagination = useAdminPagination(publicationPayments);
+  const selectedSubscription = useMemo(
+    () => subscriptions.find((subscription) => String(subscription.id) === String(formData.subscriptionId)),
+    [subscriptions, formData.subscriptionId]
+  );
+  const availableSubscriptions = useMemo(
+    () =>
+      subscriptions.filter(
+        (subscription) =>
+          subscription.status !== 'Cancelada' &&
+          Number(subscription.totalPaid || 0) < Number(subscription.finalPrice || 0)
+      ),
+    [subscriptions]
+  );
 
   const summary = useMemo(
     () => ({
@@ -678,7 +721,11 @@ export const AdminPublicationPaymentsPage = () => {
 
   const openNewModal = () => {
     setEditingPayment(null);
-    setFormData(basePaymentForm);
+    setFormData({
+      ...basePaymentForm,
+      paidAt: todayString(),
+      status: 'Pagado',
+    });
     setIsModalOpen(true);
   };
 
@@ -695,6 +742,23 @@ export const AdminPublicationPaymentsPage = () => {
     });
     setIsModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!isModalOpen || editingPayment || !selectedSubscription) {
+      return;
+    }
+
+    const expectedAmount = Number(selectedSubscription.finalPrice || 0);
+    const paidSoFar = Number(selectedSubscription.totalPaid || 0);
+    const remaining = Math.max(expectedAmount - paidSoFar, 0);
+
+    setFormData((current) => ({
+      ...current,
+      amount: String(remaining),
+      status: 'Pagado',
+      paidAt: current.paidAt || todayString(),
+    }));
+  }, [isModalOpen, editingPayment, selectedSubscription]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -810,18 +874,34 @@ export const AdminPublicationPaymentsPage = () => {
             disabled={!canCreate || Boolean(editingPayment)}
           >
             <option value="">Suscripcion</option>
-            {subscriptions.map((subscription) => (
+            {(editingPayment ? subscriptions : availableSubscriptions).map((subscription) => (
               <option key={subscription.id} value={subscription.id}>
                 {subscription.propertyTitle} - {subscription.planName}
               </option>
             ))}
           </select>
+          {selectedSubscription && (
+            <div className="admin-inline-summary stack">
+              <span>Total de la suscripcion</span>
+              <strong>{formatMoney(selectedSubscription.finalPrice)}</strong>
+              <small>
+                Pagado: {formatMoney(selectedSubscription.totalPaid)} | Pendiente:{' '}
+                {formatMoney(
+                  Math.max(
+                    Number(selectedSubscription.finalPrice || 0) -
+                      Number(selectedSubscription.totalPaid || 0),
+                    0
+                  )
+                )}
+              </small>
+            </div>
+          )}
           <div className="admin-form-row">
             <input
               value={formData.amount}
-              onChange={(event) => setFormData({ ...formData, amount: event.target.value })}
               placeholder="Monto"
               required
+              readOnly={!editingPayment}
               disabled={!canCreate}
             />
             <select
@@ -850,15 +930,7 @@ export const AdminPublicationPaymentsPage = () => {
               disabled={!canCreate}
             />
           </div>
-          <select
-            value={formData.status}
-            onChange={(event) => setFormData({ ...formData, status: event.target.value })}
-            disabled={!canCreate}
-          >
-            <option value="Pendiente">Pendiente</option>
-            <option value="Pagado">Pagado</option>
-            <option value="Rechazado">Rechazado</option>
-          </select>
+          <input value={formData.status} readOnly disabled />
           <textarea
             rows="4"
             value={formData.notes}

@@ -56,20 +56,36 @@ const resolveSubscriptionStatusFromPayment = (paymentStatus, endDate) => {
 };
 
 const recalculateSubscriptionStatus = async (connection, subscriptionId, endDate) => {
+  const [[subscription]] = await connection.query(
+    `SELECT PRECIO_FINAL, ESTADO_SUSCRIPCION
+     FROM suscripciones_publicacion
+     WHERE ID_SUSCRIPCION = ?`,
+    [subscriptionId]
+  );
+
+  if (!subscription) {
+    return;
+  }
+
+  if (subscription.ESTADO_SUSCRIPCION === 'Cancelada') {
+    return;
+  }
+
   const [[summary]] = await connection.query(
     `SELECT
-        SUM(CASE WHEN ESTADO_PAGO = 'Pagado' THEN 1 ELSE 0 END) AS PAGADOS,
+        COALESCE(SUM(CASE WHEN ESTADO_PAGO = 'Pagado' THEN MONTO ELSE 0 END), 0) AS TOTAL_PAGADO,
         SUM(CASE WHEN ESTADO_PAGO = 'Pendiente' THEN 1 ELSE 0 END) AS PENDIENTES
      FROM pagos_suscripcion
      WHERE ID_SUSCRIPCION = ?`,
     [subscriptionId]
   );
 
-  const paidCount = Number(summary?.PAGADOS || 0);
+  const paidAmount = Number(summary?.TOTAL_PAGADO || 0);
   const pendingCount = Number(summary?.PENDIENTES || 0);
+  const expectedAmount = Number(subscription.PRECIO_FINAL || 0);
 
   let nextStatus = 'Pendiente de pago';
-  if (paidCount > 0) {
+  if (expectedAmount > 0 && paidAmount >= expectedAmount) {
     nextStatus = resolveSubscriptionStatusFromPayment('Pagado', endDate);
   } else if (pendingCount > 0) {
     nextStatus = 'Pendiente de pago';
@@ -138,7 +154,7 @@ router.post('/', async (req, res) => {
     await syncExpiredSubscriptions(connection);
 
     const [[subscription]] = await connection.query(
-      `SELECT ID_SUSCRIPCION, ID_PROPIEDAD, FECHA_FIN
+      `SELECT ID_SUSCRIPCION, ID_PROPIEDAD, FECHA_FIN, PRECIO_FINAL, ESTADO_SUSCRIPCION
        FROM suscripciones_publicacion
        WHERE ID_SUSCRIPCION = ?
        FOR UPDATE`,
@@ -150,17 +166,38 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Suscripcion no encontrada.' });
     }
 
+    if (subscription.ESTADO_SUSCRIPCION === 'Cancelada') {
+      await connection.rollback();
+      return res.status(409).json({ error: 'No se puede registrar un pago para una suscripcion cancelada.' });
+    }
+
+    const [[paymentSummary]] = await connection.query(
+      `SELECT COALESCE(SUM(CASE WHEN ESTADO_PAGO = 'Pagado' THEN MONTO ELSE 0 END), 0) AS TOTAL_PAGADO
+       FROM pagos_suscripcion
+       WHERE ID_SUSCRIPCION = ?`,
+      [ID_SUSCRIPCION]
+    );
+
+    const expectedAmount = Number(subscription.PRECIO_FINAL || 0);
+    const paidSoFar = Number(paymentSummary?.TOTAL_PAGADO || 0);
+    const remainingAmount = Math.max(expectedAmount - paidSoFar, 0);
+
+    if (remainingAmount <= 0) {
+      await connection.rollback();
+      return res.status(409).json({ error: 'La suscripcion ya fue pagada completamente.' });
+    }
+
     const [result] = await connection.query(
       `INSERT INTO pagos_suscripcion (
         ID_SUSCRIPCION, MONTO, METODO_PAGO, REFERENCIA_PAGO, ESTADO_PAGO, FECHA_PAGO, OBSERVACIONES
       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(ID_SUSCRIPCION),
-        Number(MONTO) || 0,
+        remainingAmount,
         METODO_PAGO,
         REFERENCIA_PAGO,
-        ESTADO_PAGO,
-        FECHA_PAGO,
+        'Pagado',
+        FECHA_PAGO || new Date().toISOString().slice(0, 10),
         OBSERVACIONES,
       ]
     );

@@ -275,6 +275,10 @@ const PropertyFormModal = ({
     return null;
   }
 
+  const displayCoverImageValue = formData.coverImage?.startsWith('data:image/')
+    ? ''
+    : formData.coverImage;
+
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div className="admin-modal admin-modal-wide" onClick={(event) => event.stopPropagation()}>
@@ -389,9 +393,13 @@ const PropertyFormModal = ({
             disabled={!canCreate}
           />
           <input
-            value={formData.coverImage}
+            value={displayCoverImageValue}
             onChange={(event) => setFormData({ ...formData, coverImage: event.target.value })}
-            placeholder="URL imagen portada o dejala vacia para subir archivo"
+            placeholder={
+              formData.coverImage?.startsWith('data:image/')
+                ? 'Imagen cargada desde el equipo'
+                : 'URL imagen portada o dejala vacia para subir archivo'
+            }
             disabled={!canCreate}
           />
           <div className="file-upload-group">

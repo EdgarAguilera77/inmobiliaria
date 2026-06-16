@@ -60,6 +60,21 @@ const parseDate = (value) => {
 
 const formatDate = (date) => date.toISOString().slice(0, 10);
 
+const addDays = (dateValue, daysToAdd) => {
+  const nextDate = parseDate(dateValue);
+  nextDate.setDate(nextDate.getDate() + Number(daysToAdd || 0));
+  return nextDate;
+};
+
+const calculateSubscriptionDates = (startDateValue, durationDays) => {
+  const startDate = parseDate(startDateValue || new Date());
+  const endDate = addDays(startDate, durationDays);
+  return {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate),
+  };
+};
+
 const resolveActiveStatus = (requestedStatus, endDate) => {
   if (requestedStatus === 'Cancelada') {
     return 'Cancelada';
@@ -133,10 +148,6 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'La propiedad y el plan son obligatorios.' });
   }
 
-  if (!FECHA_INICIO) {
-    return res.status(400).json({ error: 'La fecha inicial es obligatoria.' });
-  }
-
   let connection;
 
   try {
@@ -180,15 +191,10 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'El plan seleccionado esta inactivo.' });
     }
 
-    const startDate = formatDate(parseDate(FECHA_INICIO));
-    const endDate = formatDate(parseDate(FECHA_FIN || FECHA_INICIO));
-
-    if (parseDate(endDate) < parseDate(startDate)) {
-      await connection.rollback();
-      return res.status(400).json({ error: 'La fecha final no puede ser menor que la fecha inicial.' });
-    }
-
-    const finalStatus = resolveActiveStatus(ESTADO_SUSCRIPCION, endDate);
+    const { startDate, endDate } = calculateSubscriptionDates(FECHA_INICIO, plan.DURACION_DIAS);
+    const finalStatus = ESTADO_SUSCRIPCION === 'Cancelada'
+      ? 'Cancelada'
+      : 'Pendiente de pago';
 
     await connection.query(
       `UPDATE suscripciones_publicacion
@@ -208,7 +214,7 @@ router.post('/', async (req, res) => {
         Number(ID_PLAN),
         ID_AGENTE ? Number(ID_AGENTE) : null,
         Number(plan.PRECIO) || 0,
-        PRECIO_FINAL === null || PRECIO_FINAL === undefined ? Number(plan.PRECIO) || 0 : Number(PRECIO_FINAL) || 0,
+        Number(plan.PRECIO) || 0,
         startDate,
         endDate,
         finalStatus,
@@ -250,10 +256,6 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'El plan es obligatorio.' });
   }
 
-  if (!FECHA_INICIO) {
-    return res.status(400).json({ error: 'La fecha inicial es obligatoria.' });
-  }
-
   let connection;
 
   try {
@@ -291,14 +293,10 @@ router.put('/:id', async (req, res) => {
       return res.status(409).json({ error: 'El plan seleccionado esta inactivo.' });
     }
 
-    const startDate = formatDate(parseDate(FECHA_INICIO));
-    const endDate = formatDate(parseDate(FECHA_FIN || FECHA_INICIO));
-
-    if (parseDate(endDate) < parseDate(startDate)) {
-      await connection.rollback();
-      return res.status(400).json({ error: 'La fecha final no puede ser menor que la fecha inicial.' });
-    }
-
+    const { startDate, endDate } = calculateSubscriptionDates(
+      FECHA_INICIO || new Date(),
+      plan.DURACION_DIAS
+    );
     const finalStatus = resolveActiveStatus(ESTADO_SUSCRIPCION, endDate);
 
     await connection.query(
@@ -310,7 +308,7 @@ router.put('/:id', async (req, res) => {
         Number(ID_PLAN),
         ID_AGENTE ? Number(ID_AGENTE) : null,
         Number(plan.PRECIO) || 0,
-        PRECIO_FINAL === null || PRECIO_FINAL === undefined ? Number(plan.PRECIO) || 0 : Number(PRECIO_FINAL) || 0,
+        Number(plan.PRECIO) || 0,
         startDate,
         endDate,
         finalStatus,
