@@ -180,7 +180,7 @@ router.post('/', async (req, res) => {
     ESTADO_PUBLICACION = 'Borrador',
   } = req.body;
 
-  if (!ID_TIPO_PROPIEDAD || !ID_ZONA || !ID_AGENTE || !TITULO || !DIRECCION || !DESCRIPCION || !OPERACION) {
+  if (!ID_TIPO_PROPIEDAD || !ID_ZONA || !ID_AGENTE || !TITULO || !DIRECCION || !OPERACION) {
     return res.status(400).json({ error: 'Faltan datos obligatorios de la propiedad' });
   }
 
@@ -205,7 +205,7 @@ router.post('/', async (req, res) => {
         ESTACIONAMIENTOS,
         AREA_M2,
         DIRECCION.trim(),
-        DESCRIPCION,
+        DESCRIPCION || null,
         IMAGEN_PORTADA,
         DESTACADA,
         ACTIVA,
@@ -242,7 +242,7 @@ router.put('/:id', async (req, res) => {
     ESTADO_PUBLICACION = 'Borrador',
   } = req.body;
 
-  if (!ID_TIPO_PROPIEDAD || !ID_ZONA || !ID_AGENTE || !TITULO || !DIRECCION || !DESCRIPCION || !OPERACION) {
+  if (!ID_TIPO_PROPIEDAD || !ID_ZONA || !ID_AGENTE || !TITULO || !DIRECCION || !OPERACION) {
     return res.status(400).json({ error: 'Faltan datos obligatorios de la propiedad' });
   }
 
@@ -267,7 +267,7 @@ router.put('/:id', async (req, res) => {
         ESTACIONAMIENTOS,
         AREA_M2,
         DIRECCION.trim(),
-        DESCRIPCION,
+        DESCRIPCION || null,
         IMAGEN_PORTADA,
         DESTACADA,
         ACTIVA,

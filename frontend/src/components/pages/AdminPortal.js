@@ -16,7 +16,6 @@ const emptyProperty = {
   parking: '',
   area: '',
   address: '',
-  description: '',
   coverImage: '',
   featured: false,
   active: true,
@@ -473,14 +472,6 @@ const PropertyFormModal = ({
               ))}
             </div>
           )}
-          <textarea
-            value={formData.description}
-            onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-            rows="4"
-            placeholder="Descripcion"
-            required
-            disabled={!canCreate}
-          />
           <div className="checkbox-row">
             <label>
               <input
