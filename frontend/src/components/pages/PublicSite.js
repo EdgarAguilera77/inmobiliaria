@@ -161,7 +161,7 @@ const PublicHeader = () => {
         <NavLink to="/nosotros">Nosotros</NavLink>
         <NavLink to="/contacto">Contacto</NavLink>
         <NavLink to="/login" className="nav-cta">
-          Admin
+          Login
         </NavLink>
       </nav>
     </header>
@@ -648,31 +648,36 @@ export const PropertyDetailPage = () => {
   );
 };
 
-export const AboutPage = () => (
-  <section className="content-section narrative-page">
-    <span className="section-chip">Nosotros</span>
-    <h1>Somos una inmobiliaria orientada a confianza, curaduria y velocidad comercial</h1>
-    <p>
-      Nova Casa combina presentacion moderna, gestion comercial y seguimiento de prospectos en
-      una sola plataforma. El objetivo es que el cliente vea propiedades activas y que el equipo
-      administre catalogo, agentes, tipos, zonas y solicitudes desde un panel central.
-    </p>
-    <div className="service-strip">
-      <div className="service-card">
-        <h3>Vision comercial</h3>
-        <p>Conectar mejor oferta, mejor ubicacion y mejor narrativa para cerrar mas rapido.</p>
+export const AboutPage = () => {
+  const { companyProfile } = useRealEstate();
+
+  return (
+    <section className="content-section narrative-page">
+      <span className="section-chip">Nosotros</span>
+      <h1>Somos una inmobiliaria orientada a confianza, seleccion y velocidad comercial</h1>
+      <p>
+        {companyProfile.name} combina presentacion moderna, gestion comercial y seguimiento de
+        prospectos en una sola plataforma. El objetivo es que el cliente vea propiedades activas
+        y que el equipo administre catalogo, agentes, tipos, zonas y solicitudes desde un panel
+        central.
+      </p>
+      <div className="service-strip">
+        <div className="service-card">
+          <h3>Vision comercial</h3>
+          <p>Conectar mejor oferta, mejor ubicacion y mejor narrativa para cerrar mas rapido.</p>
+        </div>
+        <div className="service-card">
+          <h3>Operacion ordenada</h3>
+          <p>Las propiedades se activan, destacan o despublican desde administracion.</p>
+        </div>
+        <div className="service-card">
+          <h3>Atencion continua</h3>
+          <p>Cada formulario y contacto queda registrado para dar seguimiento.</p>
+        </div>
       </div>
-      <div className="service-card">
-        <h3>Operacion ordenada</h3>
-        <p>Las propiedades se activan, destacan o despublican desde administracion.</p>
-      </div>
-      <div className="service-card">
-        <h3>Atencion continua</h3>
-        <p>Cada formulario y contacto queda registrado para dar seguimiento.</p>
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export const ServicesPage = () => (
   <section className="content-section narrative-page">

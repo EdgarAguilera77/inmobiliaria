@@ -71,6 +71,24 @@ const uploadApi = axios.create({
   baseURL: API_BASE,
 });
 
+const uploadSingleImagePreview = async (file) => {
+  if (!file) {
+    return '';
+  }
+
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error(`La imagen ${file.name} supera el limite de 3 MB.`);
+  }
+
+  const imageBase64 = await readFileAsDataUrl(file);
+  const response = await uploadApi.post('/uploads/preview-base64', {
+    fileName: file.name,
+    imageBase64,
+  });
+
+  return response.data.previewUrl;
+};
+
 const formatCurrency = (value, maximumFractionDigits = 0) =>
   Number(value || 0).toLocaleString('es-HN', {
     style: 'currency',
@@ -512,12 +530,16 @@ const AgentFormModal = ({
   formData,
   setFormData,
   canCreate,
+  imageError,
+  onPhotoFileChange,
   onClose,
   onSubmit,
 }) => {
   if (!isOpen) {
     return null;
   }
+
+  const displayPhotoValue = formData.photo?.startsWith('data:image/') ? '' : formData.photo;
 
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
@@ -531,6 +553,7 @@ const AgentFormModal = ({
             Cerrar
           </button>
         </div>
+        {imageError && <div className="feedback-banner error">{imageError}</div>}
         <form className="compact-admin-form" onSubmit={onSubmit}>
           <input
             value={formData.name}
@@ -562,12 +585,41 @@ const AgentFormModal = ({
             disabled={!canCreate}
           />
           <input
-            value={formData.photo}
+            value={displayPhotoValue}
             onChange={(event) => setFormData({ ...formData, photo: event.target.value })}
-            placeholder="URL foto"
-            required
+            placeholder={
+              formData.photo?.startsWith('data:image/')
+                ? 'Foto cargada desde el equipo'
+                : 'URL foto opcional'
+            }
             disabled={!canCreate}
           />
+          <div className="file-upload-group">
+            <label className="file-upload-label" htmlFor="agent-photo-file">
+              Subir foto desde el equipo
+            </label>
+            <input
+              id="agent-photo-file"
+              type="file"
+              accept="image/*"
+              onChange={onPhotoFileChange}
+              disabled={!canCreate}
+            />
+          </div>
+          {formData.photo && (
+            <div className="image-upload-preview">
+              <img src={formData.photo} alt={formData.name || 'Foto del agente'} />
+              {canCreate && (
+                <button
+                  type="button"
+                  className="table-button danger"
+                  onClick={() => setFormData((current) => ({ ...current, photo: '' }))}
+                >
+                  Quitar foto
+                </button>
+              )}
+            </div>
+          )}
           <input
             value={formData.specialty}
             onChange={(event) => setFormData({ ...formData, specialty: event.target.value })}
@@ -1098,17 +1150,37 @@ export const AdminAgentsPage = () => {
   const [formData, setFormData] = useState(emptyAgent);
   const [editingId, setEditingId] = useState(null);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
+  const [imageError, setImageError] = useState('');
 
   const closeAgentModal = () => {
     setFormData(emptyAgent);
     setEditingId(null);
+    setImageError('');
     setIsAgentModalOpen(false);
   };
 
   const openNewAgentModal = () => {
     setFormData(emptyAgent);
     setEditingId(null);
+    setImageError('');
     setIsAgentModalOpen(true);
+  };
+
+  const handleAgentPhotoFileChange = async (event) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles?.length) {
+      return;
+    }
+
+    try {
+      setImageError('');
+      const photoUrl = await uploadSingleImagePreview(selectedFiles[0]);
+      setFormData((current) => ({ ...current, photo: photoUrl }));
+    } catch (error) {
+      setImageError(error.message);
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const submitForm = async (event) => {
@@ -1160,6 +1232,7 @@ export const AdminAgentsPage = () => {
                     onEdit={() => {
                       setEditingId(agent.id);
                       setFormData(agent);
+                      setImageError('');
                       setIsAgentModalOpen(true);
                     }}
                     onDelete={() => deleteAgent(agent.id)}
@@ -1178,6 +1251,8 @@ export const AdminAgentsPage = () => {
         formData={formData}
         setFormData={setFormData}
         canCreate={canCreate}
+        imageError={imageError}
+        onPhotoFileChange={handleAgentPhotoFileChange}
         onClose={closeAgentModal}
         onSubmit={submitForm}
       />
