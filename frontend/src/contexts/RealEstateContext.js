@@ -344,7 +344,7 @@ export const RealEstateProvider = ({ children }) => {
       ESTACIONAMIENTOS: Number(property.parking) || 0,
       AREA_M2: Number(property.area) || 0,
       DIRECCION: property.address,
-      DESCRIPCION: property.description || null,
+      DESCRIPCION: property.description || '',
       IMAGEN_PORTADA: property.coverImage,
       DESTACADA: property.featured ? 1 : 0,
       ACTIVA: property.active ? 1 : 0,
