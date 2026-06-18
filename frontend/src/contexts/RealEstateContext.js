@@ -91,7 +91,7 @@ const mapContact = (contact) => ({
   email: contact.CORREO,
   phone: contact.TELEFONO,
   message: contact.MENSAJE,
-  status: contact.ESTADO,
+  status: contact.ESTADO === 'Cerrado' ? 'Cerrada' : 'Abierta',
   createdAt: contact.FECHA_CREACION,
   propertyTitle: contact.PROPIEDAD_TITULO || null,
   propertySlug: contact.PROPIEDAD_SLUG || null,
@@ -534,7 +534,7 @@ export const RealEstateProvider = ({ children }) => {
       CORREO: contact.email,
       TELEFONO: contact.phone,
       MENSAJE: contact.message,
-      ESTADO: 'Nuevo',
+      ESTADO: 'Abierta',
     });
 
     await refreshContacts();

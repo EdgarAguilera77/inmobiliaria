@@ -1,8 +1,9 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useRealEstate } from '../../contexts/RealEstateContext';
 import { AuthContext } from './AuthContext';
 import { API_BASE } from '../../constants/api';
+import AdminPagination from '../common/AdminPagination';
 
 const emptyProperty = {
   title: '',
@@ -1489,6 +1490,10 @@ export const AdminContactsPage = () => {
   const { contacts, properties, updateContactStatus, deleteContact, isLoading } = useRealEstate();
   const canCreate = hasPermission('Contactos', 'CREAR');
   const canDelete = hasPermission('Contactos', 'ELIMINAR');
+  const [statusTab, setStatusTab] = useState('Abiertas');
+  const [sortOrder, setSortOrder] = useState('recent');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const propertyNameById = useMemo(
     () =>
@@ -1498,6 +1503,34 @@ export const AdminContactsPage = () => {
       }, {}),
     [properties]
   );
+
+  const filteredContacts = useMemo(() => {
+    const normalizedStatus = statusTab === 'Cerradas' ? 'Cerrada' : 'Abierta';
+    const matchesStatus = contacts.filter((contact) => contact.status === normalizedStatus);
+
+    return [...matchesStatus].sort((left, right) => {
+      const leftDate = new Date(left.createdAt || 0).getTime();
+      const rightDate = new Date(right.createdAt || 0).getTime();
+      return sortOrder === 'recent' ? rightDate - leftDate : leftDate - rightDate;
+    });
+  }, [contacts, sortOrder, statusTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredContacts.length / itemsPerPage));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusTab, sortOrder, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedContacts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredContacts.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, filteredContacts, itemsPerPage]);
 
   if (isLoading) {
     return <div className="admin-page"><h2>Cargando solicitudes...</h2></div>;
@@ -1510,6 +1543,31 @@ export const AdminContactsPage = () => {
         text="Actualiza el estado de cada lead desde el dashboard administrativo."
       />
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
+      <div className="admin-history-toolbar">
+        <div className="table-actions">
+          <button
+            type="button"
+            className={`table-button ${statusTab === 'Abiertas' ? 'active-page' : 'ghost'}`}
+            onClick={() => setStatusTab('Abiertas')}
+          >
+            Abiertas
+          </button>
+          <button
+            type="button"
+            className={`table-button ${statusTab === 'Cerradas' ? 'active-page' : 'ghost'}`}
+            onClick={() => setStatusTab('Cerradas')}
+          >
+            Cerradas
+          </button>
+        </div>
+        <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+          <option value="recent">Mas recientes primero</option>
+          <option value="oldest">Mas antiguas primero</option>
+        </select>
+        <span className="history-counter">
+          {filteredContacts.length} {filteredContacts.length === 1 ? 'solicitud' : 'solicitudes'}
+        </span>
+      </div>
       <div className="admin-panel">
         <table className="admin-table">
           <thead>
@@ -1517,12 +1575,13 @@ export const AdminContactsPage = () => {
               <th>Cliente</th>
               <th>Propiedad</th>
               <th>Mensaje</th>
+              <th>Fecha</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {contacts.map((contact) => (
+            {paginatedContacts.map((contact) => (
               <tr key={contact.id}>
                 <td data-label="Cliente">
                   <strong>{contact.name}</strong>
@@ -1533,15 +1592,17 @@ export const AdminContactsPage = () => {
                   {contact.propertyId ? propertyNameById[contact.propertyId] : 'Consulta general'}
                 </td>
                 <td data-label="Mensaje">{contact.message}</td>
+                <td data-label="Fecha">
+                  {contact.createdAt ? String(contact.createdAt).slice(0, 10) : 'Sin fecha'}
+                </td>
                 <td data-label="Estado">
                   <select
                     value={contact.status}
                     onChange={(event) => updateContactStatus(contact.id, event.target.value)}
                     disabled={!canCreate}
                   >
-                    <option value="Nuevo">Nuevo</option>
-                    <option value="En seguimiento">En seguimiento</option>
-                    <option value="Cerrado">Cerrado</option>
+                    <option value="Abierta">Abierta</option>
+                    <option value="Cerrada">Cerrada</option>
                   </select>
                 </td>
                 <td data-label="Acciones">
@@ -1563,6 +1624,14 @@ export const AdminContactsPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredContacts.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,22 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+const normalizeContactStatusForDb = (status) => {
+  if (!status) {
+    return 'Nuevo';
+  }
+
+  if (status === 'Abierta') {
+    return 'Nuevo';
+  }
+
+  if (status === 'Cerrada') {
+    return 'Cerrado';
+  }
+
+  return status;
+};
+
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -51,7 +67,14 @@ router.post('/', async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO solicitudes_contacto (ID_PROPIEDAD, NOMBRE, CORREO, TELEFONO, MENSAJE, ESTADO)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [ID_PROPIEDAD, NOMBRE.trim(), CORREO.trim(), TELEFONO.trim(), MENSAJE, ESTADO]
+      [
+        ID_PROPIEDAD,
+        NOMBRE.trim(),
+        CORREO.trim(),
+        TELEFONO.trim(),
+        MENSAJE,
+        normalizeContactStatusForDb(ESTADO),
+      ]
     );
 
     res.status(201).json({ message: 'Solicitud creada con exito', id: result.insertId });
@@ -73,7 +96,7 @@ router.patch('/:id/estado', async (req, res) => {
       `UPDATE solicitudes_contacto
        SET ESTADO = ?
        WHERE ID_SOLICITUD = ?`,
-      [ESTADO, req.params.id]
+      [normalizeContactStatusForDb(ESTADO), req.params.id]
     );
 
     if (!result.affectedRows) {
@@ -106,4 +129,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
