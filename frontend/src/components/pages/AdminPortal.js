@@ -540,8 +540,6 @@ const AgentFormModal = ({
     return null;
   }
 
-  const displayPhotoValue = formData.photo?.startsWith('data:image/') ? '' : formData.photo;
-
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
@@ -583,16 +581,6 @@ const AgentFormModal = ({
             onChange={(event) => setFormData({ ...formData, email: event.target.value })}
             placeholder="Correo"
             required
-            disabled={!canCreate}
-          />
-          <input
-            value={displayPhotoValue}
-            onChange={(event) => setFormData({ ...formData, photo: event.target.value })}
-            placeholder={
-              formData.photo?.startsWith('data:image/')
-                ? 'Foto cargada desde el equipo'
-                : 'URL foto opcional'
-            }
             disabled={!canCreate}
           />
           <div className="file-upload-group">

@@ -522,8 +522,10 @@ export const PropertyTypePage = () => {
 
 export const PropertyDetailPage = () => {
   const { slug } = useParams();
-  const { companyProfile, properties, saveContact, isLoading } = useRealEstate();
+  const { companyProfile, properties, agents, saveContact, isLoading } = useRealEstate();
   const property = properties.find((item) => item.slug === slug);
+  const currentAgent = agents.find((agent) => agent.id === property?.agentId);
+  const displayAgent = currentAgent || property?.agent || null;
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -616,14 +618,22 @@ export const PropertyDetailPage = () => {
             <span>{property.area} m2</span>
           </div>
           <p>{property.description}</p>
-          <div className="agent-box">
-            <img src={property.agent?.photo} alt={property.agent?.name} />
-            <div>
-              <strong>{property.agent?.name}</strong>
-              <p>{property.agent?.role}</p>
-              <p>{property.agent?.phone}</p>
+          {displayAgent && (
+            <div className="agent-box">
+              {displayAgent.photo ? (
+                <img src={displayAgent.photo} alt={displayAgent.name} />
+              ) : (
+                <div className="agent-avatar-fallback">
+                  {displayAgent.name?.charAt(0)?.toUpperCase() || 'A'}
+                </div>
+              )}
+              <div>
+                <strong>{displayAgent.name}</strong>
+                <p>{displayAgent.role}</p>
+                <p>{displayAgent.phone}</p>
+              </div>
             </div>
-          </div>
+          )}
           <form className="contact-form" onSubmit={submitRequest}>
             <h3>Formulario de contacto</h3>
             {contactFeedback.message && (

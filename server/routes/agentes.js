@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({ message: 'Agente creado con exito', id: result.insertId });
   } catch (error) {
     console.error('Error al crear agente:', error);
-    res.status(500).json({ error: 'Error al crear agente' });
+    res.status(500).json({ error: 'Error al crear agente', detail: error.sqlMessage || error.message });
   }
 });
 
@@ -101,7 +101,7 @@ router.put('/:id', async (req, res) => {
     res.status(200).json({ message: 'Agente actualizado con exito' });
   } catch (error) {
     console.error('Error al actualizar agente:', error);
-    res.status(500).json({ error: 'Error al actualizar agente' });
+    res.status(500).json({ error: 'Error al actualizar agente', detail: error.sqlMessage || error.message });
   }
 });
 
@@ -121,4 +121,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-

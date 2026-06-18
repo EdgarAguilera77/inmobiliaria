@@ -395,7 +395,7 @@ export const RealEstateProvider = ({ children }) => {
       await api.post('/agentes', payload);
     }
 
-    await refreshAgents();
+    await Promise.all([refreshAgents(), refreshProperties(), refreshSales(), refreshCommissions()]);
   };
 
   const deleteAgent = async (agentId) => {
