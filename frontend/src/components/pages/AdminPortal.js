@@ -1486,8 +1486,9 @@ export const AdminImagesPage = () => {
 
 export const AdminContactsPage = () => {
   const { hasPermission } = useContext(AuthContext);
-  const { contacts, properties, updateContactStatus, isLoading } = useRealEstate();
+  const { contacts, properties, updateContactStatus, deleteContact, isLoading } = useRealEstate();
   const canCreate = hasPermission('Contactos', 'CREAR');
+  const canDelete = hasPermission('Contactos', 'ELIMINAR');
 
   const propertyNameById = useMemo(
     () =>
@@ -1508,7 +1509,7 @@ export const AdminContactsPage = () => {
         title="Solicitudes y contactos"
         text="Actualiza el estado de cada lead desde el dashboard administrativo."
       />
-      <PermissionHint canCreate={canCreate} canDelete={false} />
+      <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       <div className="admin-panel">
         <table className="admin-table">
           <thead>
@@ -1517,11 +1518,12 @@ export const AdminContactsPage = () => {
               <th>Propiedad</th>
               <th>Mensaje</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {contacts.map((contact) => (
-                <tr key={contact.id}>
+              <tr key={contact.id}>
                 <td data-label="Cliente">
                   <strong>{contact.name}</strong>
                   <div>{contact.phone}</div>
@@ -1541,6 +1543,21 @@ export const AdminContactsPage = () => {
                     <option value="En seguimiento">En seguimiento</option>
                     <option value="Cerrado">Cerrado</option>
                   </select>
+                </td>
+                <td data-label="Acciones">
+                  <div className="table-actions">
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        className="table-button danger"
+                        onClick={() => deleteContact(contact.id)}
+                      >
+                        Eliminar
+                      </button>
+                    ) : (
+                      <span className="muted-copy">Sin permisos</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

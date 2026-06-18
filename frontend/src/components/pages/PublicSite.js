@@ -232,14 +232,26 @@ export const HomePage = () => {
     phone: '',
     message: '',
   });
+  const [contactFeedback, setContactFeedback] = useState({ type: '', message: '' });
   const featuredProperties = properties
     .filter((property) => property.featured && isPropertyPubliclyVisible(property))
     .slice(0, 3);
 
-  const submitContact = (event) => {
+  const submitContact = async (event) => {
     event.preventDefault();
-    saveContact(contactForm);
-    setContactForm({ name: '', email: '', phone: '', message: '' });
+    try {
+      await saveContact(contactForm);
+      setContactForm({ name: '', email: '', phone: '', message: '' });
+      setContactFeedback({
+        type: 'success',
+        message: 'Tu solicitud fue enviada correctamente. Te contactaremos pronto.',
+      });
+    } catch (error) {
+      setContactFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'No se pudo enviar la solicitud.',
+      });
+    }
   };
 
   if (isLoading) {
@@ -346,6 +358,11 @@ export const HomePage = () => {
           </p>
         </div>
         <form className="contact-form compact" onSubmit={submitContact}>
+          {contactFeedback.message && (
+            <div className={`feedback-banner ${contactFeedback.type}`}>
+              {contactFeedback.message}
+            </div>
+          )}
           <input
             value={contactForm.name}
             onChange={(event) => setContactForm({ ...contactForm, name: event.target.value })}
@@ -514,6 +531,7 @@ export const PropertyDetailPage = () => {
     phone: '',
     message: property ? `Hola, quiero mas informacion sobre ${property.title}.` : '',
   });
+  const [contactFeedback, setContactFeedback] = useState({ type: '', message: '' });
 
   if (isLoading) {
     return <section className="content-section"><h2>Cargando detalle de propiedad...</h2></section>;
@@ -535,15 +553,26 @@ export const PropertyDetailPage = () => {
     );
   }
 
-  const submitRequest = (event) => {
+  const submitRequest = async (event) => {
     event.preventDefault();
-    saveContact({ ...formData, propertyId: property.id });
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      message: `Hola, quiero mas informacion sobre ${property.title}.`,
-    });
+    try {
+      await saveContact({ ...formData, propertyId: property.id });
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        message: `Hola, quiero mas informacion sobre ${property.title}.`,
+      });
+      setContactFeedback({
+        type: 'success',
+        message: 'Tu solicitud fue enviada correctamente. Te contactaremos pronto.',
+      });
+    } catch (error) {
+      setContactFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'No se pudo enviar la solicitud.',
+      });
+    }
   };
 
   const galleryImages = property.images?.length ? property.images : [property.coverImage];
@@ -597,6 +626,11 @@ export const PropertyDetailPage = () => {
           </div>
           <form className="contact-form" onSubmit={submitRequest}>
             <h3>Formulario de contacto</h3>
+            {contactFeedback.message && (
+              <div className={`feedback-banner ${contactFeedback.type}`}>
+                {contactFeedback.message}
+              </div>
+            )}
             <input
               value={formData.name}
               onChange={(event) => setFormData({ ...formData, name: event.target.value })}
@@ -709,11 +743,23 @@ export const ContactPage = () => {
     propertyId: '',
     message: '',
   });
+  const [contactFeedback, setContactFeedback] = useState({ type: '', message: '' });
 
-  const submitForm = (event) => {
+  const submitForm = async (event) => {
     event.preventDefault();
-    saveContact(formData);
-    setFormData({ name: '', email: '', phone: '', propertyId: '', message: '' });
+    try {
+      await saveContact(formData);
+      setFormData({ name: '', email: '', phone: '', propertyId: '', message: '' });
+      setContactFeedback({
+        type: 'success',
+        message: 'Tu solicitud fue enviada correctamente. Te contactaremos pronto.',
+      });
+    } catch (error) {
+      setContactFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'No se pudo enviar la solicitud.',
+      });
+    }
   };
 
   if (isLoading) {
@@ -730,6 +776,11 @@ export const ContactPage = () => {
         <p>{companyProfile.email}</p>
       </div>
       <form className="contact-form" onSubmit={submitForm}>
+        {contactFeedback.message && (
+          <div className={`feedback-banner ${contactFeedback.type}`}>
+            {contactFeedback.message}
+          </div>
+        )}
         <input
           value={formData.name}
           onChange={(event) => setFormData({ ...formData, name: event.target.value })}

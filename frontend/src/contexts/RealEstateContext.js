@@ -528,7 +528,7 @@ export const RealEstateProvider = ({ children }) => {
   };
 
   const saveContact = async (contact) => {
-    await api.post('/solicitudes-contacto', {
+    const response = await api.post('/solicitudes-contacto', {
       ID_PROPIEDAD: contact.propertyId ? Number(contact.propertyId) : null,
       NOMBRE: contact.name,
       CORREO: contact.email,
@@ -538,12 +538,18 @@ export const RealEstateProvider = ({ children }) => {
     });
 
     await refreshContacts();
+    return response.data;
   };
 
   const updateContactStatus = async (contactId, status) => {
     await api.patch(`/solicitudes-contacto/${contactId}/estado`, {
       ESTADO: status,
     });
+    await refreshContacts();
+  };
+
+  const deleteContact = async (contactId) => {
+    await api.delete(`/solicitudes-contacto/${contactId}`);
     await refreshContacts();
   };
 
@@ -631,6 +637,7 @@ export const RealEstateProvider = ({ children }) => {
     deletePlan,
     saveContact,
     updateContactStatus,
+    deleteContact,
     createSale,
     updateSale,
     deleteSale,
