@@ -57,6 +57,7 @@ const mapAcceptance = (acceptance) => ({
 });
 
 const DEFAULT_COMMISSION_RATE = 5;
+const FIXED_TERMS_TITLE = 'Terminos y condiciones de primer ingreso';
 
 const printAcceptance = (acceptance) => {
   const printWindow = window.open('', '_blank', 'width=920,height=760');
@@ -75,7 +76,7 @@ const printAcceptance = (acceptance) => {
   printWindow.document.write(`
     <html>
       <head>
-        <title>${acceptance.TITULO_TERMINOS}</title>
+        <title>${FIXED_TERMS_TITLE}</title>
         <style>
           body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -111,7 +112,7 @@ const printAcceptance = (acceptance) => {
         </style>
       </head>
       <body>
-        <h1>${acceptance.TITULO_TERMINOS}</h1>
+        <h1>${FIXED_TERMS_TITLE}</h1>
         <div class="meta">
           <div><strong>Usuario:</strong> ${acceptance.NOMBRE}</div>
           <div><strong>Correo:</strong> ${acceptance.CORREO}</div>
@@ -164,7 +165,7 @@ const exportAcceptancePdf = (acceptance) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.setTextColor(32, 79, 70);
-  doc.text(acceptance.TITULO_TERMINOS, margin, currentY);
+  doc.text(FIXED_TERMS_TITLE, margin, currentY);
   currentY += 30;
 
   doc.setFont('helvetica', 'normal');
@@ -224,7 +225,7 @@ const AcceptanceDetailModal = ({ acceptance, onClose }) => {
         <div className="admin-modal-header">
           <div>
             <span className="section-chip">Aceptacion registrada</span>
-            <h3>{acceptance.TITULO_TERMINOS}</h3>
+            <h3>{FIXED_TERMS_TITLE}</h3>
             <p className="muted-copy">
               {acceptance.NOMBRE} - {acceptance.CORREO} - {new Date(acceptance.FECHA_ACEPTACION).toLocaleString('es-HN')}
             </p>
@@ -379,7 +380,7 @@ export const AdminLegalTermsPage = () => {
                     <div>Codigo usuario: {acceptance.CODIGO_USUARIO}</div>
                   </td>
                   <td data-label="Fecha">{new Date(acceptance.FECHA_ACEPTACION).toLocaleString('es-HN')}</td>
-                  <td data-label="Documento">{acceptance.TITULO_TERMINOS}</td>
+                  <td data-label="Documento">{FIXED_TERMS_TITLE}</td>
                   <td data-label="Acciones">
                     <div className="table-actions">
                       <ActionButton onClick={() => setSelectedAcceptance(acceptance)} tone="ghost">

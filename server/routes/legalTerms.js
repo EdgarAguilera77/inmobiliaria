@@ -121,8 +121,6 @@ router.post('/accept', async (req, res) => {
     );
 
     if (existingAcceptance.length === 0) {
-      const acceptedName = acceptedByName?.trim() || user.NOMBRE;
-
       await connection.query(
         `
           INSERT INTO aceptaciones_terminos
@@ -132,7 +130,7 @@ router.post('/accept', async (req, res) => {
         [
           codigoUsuario,
           TERMS_VERSION,
-          `${TERMS_TITLE} - ${acceptedName}`,
+          TERMS_TITLE,
           TERMS_TEXT.trim(),
         ]
       );
