@@ -669,11 +669,14 @@ select:disabled {
   bottom: 18px;
   width: 262px;
   padding: 18px;
+  display: flex;
+  flex-direction: column;
   border-radius: 30px;
   background: linear-gradient(180deg, #183b35, #204f46);
   color: #fff;
   box-shadow: var(--shadow);
   transition: width 0.3s ease;
+  overflow: hidden;
 }
 
 .mobile-sidebar-toggle,
@@ -728,6 +731,7 @@ select:disabled {
   align-items: center;
   gap: 12px;
   padding: 10px 8px 18px;
+  flex-shrink: 0;
 }
 
 .sidebar-icon-button {
@@ -775,6 +779,7 @@ select:disabled {
   margin-bottom: 14px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .sidebar-user-icon {
@@ -790,6 +795,31 @@ select:disabled {
   margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: 13px;
+}
+
+.sidebar-menu-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
 }
 
 .nav-group {

@@ -130,89 +130,91 @@ const Sidebar = ({
           </div>
         )}
       </div>
-      <ul className="nav-group">
-        {dashboardItem && (
-          <li className="nav-item nav-item-standalone" key={dashboardItem.name}>
-            <NavLink
-              to={dashboardItem.path}
-              className={({ isActive }) => (isActive ? 'active' : '')}
-              end={dashboardItem.path === '/admin'}
-              onClick={onMobileClose}
-            >
-              <FontAwesomeIcon icon={dashboardItem.icon} />
-              {!isCompact && dashboardItem.name}
+      <div className="sidebar-menu-scroll">
+        <ul className="nav-group">
+          {dashboardItem && (
+            <li className="nav-item nav-item-standalone" key={dashboardItem.name}>
+              <NavLink
+                to={dashboardItem.path}
+                className={({ isActive }) => (isActive ? 'active' : '')}
+                end={dashboardItem.path === '/admin'}
+                onClick={onMobileClose}
+              >
+                <FontAwesomeIcon icon={dashboardItem.icon} />
+                {!isCompact && dashboardItem.name}
+              </NavLink>
+            </li>
+          )}
+          {menuGroups.map((group) => {
+            const isGroupOpen = !isCompact && openGroup === group.key;
+            const hasActiveRoute = group.items.some((item) => location.pathname.startsWith(item.path));
+
+            return (
+              <li
+                className={`nav-accordion ${isGroupOpen ? 'open' : ''} ${
+                  hasActiveRoute ? 'active-group' : ''
+                }`}
+                key={group.key}
+              >
+                <button
+                  type="button"
+                  className="nav-accordion-trigger"
+                  onClick={() => {
+                    if (isCompact) {
+                      toggleSidebar();
+                      return;
+                    }
+
+                    setOpenGroup((current) => (current === group.key ? '' : group.key));
+                  }}
+                >
+                  <span className="nav-accordion-title">
+                    <FontAwesomeIcon icon={getGroupIcon(group.key)} />
+                    {!isCompact && group.name}
+                  </span>
+                  {!isCompact && (
+                    <FontAwesomeIcon icon={isGroupOpen ? faChevronDown : faChevronRight} />
+                  )}
+                </button>
+                {!isCompact && (
+                  <div className={`nav-accordion-panel ${isGroupOpen ? 'expanded' : ''}`}>
+                    {group.items.map((item) => (
+                      <NavLink
+                        key={item.name}
+                        to={item.path}
+                        className={({ isActive }) =>
+                          `nav-subitem ${isActive ? 'active' : ''}`.trim()
+                        }
+                        end={item.path === '/admin'}
+                        onClick={onMobileClose}
+                      >
+                        <FontAwesomeIcon icon={item.icon} />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+          <li className="nav-item">
+            <NavLink to="/" end onClick={onMobileClose}>
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              {!isCompact && 'Ver sitio publico'}
             </NavLink>
           </li>
-        )}
-        {menuGroups.map((group) => {
-          const isGroupOpen = !isCompact && openGroup === group.key;
-          const hasActiveRoute = group.items.some((item) => location.pathname.startsWith(item.path));
-
-          return (
-            <li
-              className={`nav-accordion ${isGroupOpen ? 'open' : ''} ${
-                hasActiveRoute ? 'active-group' : ''
-              }`}
-              key={group.key}
-            >
-              <button
-                type="button"
-                className="nav-accordion-trigger"
-                onClick={() => {
-                  if (isCompact) {
-                    toggleSidebar();
-                    return;
-                  }
-
-                  setOpenGroup((current) => (current === group.key ? '' : group.key));
-                }}
-              >
-                <span className="nav-accordion-title">
-                  <FontAwesomeIcon icon={getGroupIcon(group.key)} />
-                  {!isCompact && group.name}
-                </span>
-                {!isCompact && (
-                  <FontAwesomeIcon icon={isGroupOpen ? faChevronDown : faChevronRight} />
-                )}
-              </button>
-              {!isCompact && (
-                <div className={`nav-accordion-panel ${isGroupOpen ? 'expanded' : ''}`}>
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={item.name}
-                      to={item.path}
-                      className={({ isActive }) =>
-                        `nav-subitem ${isActive ? 'active' : ''}`.trim()
-                      }
-                      end={item.path === '/admin'}
-                      onClick={onMobileClose}
-                    >
-                      <FontAwesomeIcon icon={item.icon} />
-                      <span>{item.name}</span>
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </li>
-          );
-        })}
-        <li className="nav-item">
-          <NavLink to="/" end onClick={onMobileClose}>
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-            {!isCompact && 'Ver sitio publico'}
-          </NavLink>
-        </li>
-        <li
-          className="nav-item logout"
-          onClick={() => {
-            onMobileClose?.();
-            handleLogout();
-          }}
+          <li
+            className="nav-item logout"
+            onClick={() => {
+              onMobileClose?.();
+              handleLogout();
+            }}
           >
-          <FontAwesomeIcon icon={faSignOutAlt} />
-          {!isCompact && 'Cerrar sesion'}
-        </li>
-      </ul>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            {!isCompact && 'Cerrar sesion'}
+          </li>
+        </ul>
+      </div>
     </nav>
   );
 };
