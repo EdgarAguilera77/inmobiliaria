@@ -24,7 +24,7 @@ const recalculatePropertyPublicationState = async (propertyId, connection = null
   const executor = getExecutor(connection);
 
   const [propertyRows] = await executor.query(
-    `SELECT ID_PROPIEDAD, ACTIVA, ESTADO_COMERCIAL
+    `SELECT ID_PROPIEDAD, ACTIVA, ESTADO_COMERCIAL, ESTADO_PUBLICACION_MANUAL
      FROM propiedades
      WHERE ID_PROPIEDAD = ?`,
     [propertyId]
@@ -44,6 +44,16 @@ const recalculatePropertyPublicationState = async (propertyId, connection = null
       [propertyId]
     );
     return 'Pausada';
+  }
+
+  if (property.ESTADO_PUBLICACION_MANUAL) {
+    await executor.query(
+      `UPDATE propiedades
+       SET ESTADO_PUBLICACION = ?
+       WHERE ID_PROPIEDAD = ?`,
+      [property.ESTADO_PUBLICACION_MANUAL, propertyId]
+    );
+    return property.ESTADO_PUBLICACION_MANUAL;
   }
 
   const [subscriptionRows] = await executor.query(

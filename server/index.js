@@ -24,6 +24,9 @@ const pagosPublicacionRoutes = require('./routes/pagosPublicacion');
 const legalTermsRoutes = require('./routes/legalTerms');
 const ensureLegalTermsSchema = require('./utils/ensureLegalTermsSchema');
 const ensureAgentPhotoSchema = require('./utils/ensureAgentPhotoSchema');
+const ensureCommissionSplitSchema = require('./utils/ensureCommissionSplitSchema');
+const { ensureCommissionSettingsSchema } = require('./utils/ensureCommissionSettingsSchema');
+const ensurePropertyPublicationManualSchema = require('./utils/ensurePropertyPublicationManualSchema');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -75,6 +78,9 @@ const startServer = async () => {
   try {
     await ensureLegalTermsSchema();
     await ensureAgentPhotoSchema();
+    await ensureCommissionSplitSchema();
+    await ensureCommissionSettingsSchema();
+    await ensurePropertyPublicationManualSchema();
     server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en el puerto ${PORT}`);
     });

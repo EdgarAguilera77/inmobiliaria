@@ -35,9 +35,9 @@ const AdminPagination = ({
           value={itemsPerPage}
           onChange={(event) => onItemsPerPageChange(Number(event.target.value))}
         >
-          <option value={10}>10 por pagina</option>
-          <option value={20}>20 por pagina</option>
-          <option value={50}>50 por pagina</option>
+          <option value={5}>5 por pagina</option>
+          <option value={15}>15 por pagina</option>
+          <option value={25}>25 por pagina</option>
         </select>
       </div>
       <div className="admin-pagination-controls">

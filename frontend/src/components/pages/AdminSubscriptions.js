@@ -101,7 +101,7 @@ const AdminModalShell = ({ chip, title, isOpen, onClose, children, wide = false 
   );
 };
 
-const useAdminPagination = (items, initialPageSize = 10) => {
+const useAdminPagination = (items, initialPageSize = 5) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialPageSize);
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));

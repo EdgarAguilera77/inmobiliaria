@@ -7,6 +7,7 @@ import {
   MANAGED_PERMISSION_NAMES,
   OBJECT_LABELS,
 } from '../../constants/permissions';
+import AdminPagination from '../common/AdminPagination';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -281,7 +282,10 @@ const PermissionsModal = ({
 
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
-      <div className="admin-modal admin-modal-wide" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="admin-modal admin-modal-wide permission-responsive-modal"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="admin-modal-header">
           <div>
             <span className="section-chip">Permisos</span>
@@ -292,43 +296,45 @@ const PermissionsModal = ({
             Cerrar
           </button>
         </div>
-        <div className="permission-modal-grid">
-          {activeObjects.map((object) => (
-            <article key={object.ID_OBJETO} className="permission-module-card">
-              <div className="permission-module-head">
-                <strong>{OBJECT_LABELS[object.NOMBRE_OBJETO] || object.NOMBRE_OBJETO}</strong>
-                <span className="muted-copy">Modulo</span>
-              </div>
-              <div className="permission-toggle-list">
-                {permissionsCatalog.map((permission) => (
-                  <label
-                    key={`${object.ID_OBJETO}-${permission.ID_PERMISO}`}
-                    className={`permission-toggle ${
-                      roleHasPermission(object.NOMBRE_OBJETO, permission.NOMBRE_PERMISO)
-                        ? 'enabled'
-                        : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={roleHasPermission(object.NOMBRE_OBJETO, permission.NOMBRE_PERMISO)}
-                      onChange={() =>
-                        toggleRolePermission(
-                          selectedRoleId,
-                          object.ID_OBJETO,
-                          object.NOMBRE_OBJETO,
-                          permission.ID_PERMISO,
-                          permission.NOMBRE_PERMISO
-                        )
-                      }
-                      disabled={!selectedRoleId || !canCreate}
-                    />
-                    <span>{permission.NOMBRE_PERMISO}</span>
-                  </label>
-                ))}
-              </div>
-            </article>
-          ))}
+        <div className="permission-modal-body">
+          <div className="permission-modal-grid">
+            {activeObjects.map((object) => (
+              <article key={object.ID_OBJETO} className="permission-module-card">
+                <div className="permission-module-head">
+                  <strong>{OBJECT_LABELS[object.NOMBRE_OBJETO] || object.NOMBRE_OBJETO}</strong>
+                  <span className="muted-copy">Modulo</span>
+                </div>
+                <div className="permission-toggle-list">
+                  {permissionsCatalog.map((permission) => (
+                    <label
+                      key={`${object.ID_OBJETO}-${permission.ID_PERMISO}`}
+                      className={`permission-toggle ${
+                        roleHasPermission(object.NOMBRE_OBJETO, permission.NOMBRE_PERMISO)
+                          ? 'enabled'
+                          : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={roleHasPermission(object.NOMBRE_OBJETO, permission.NOMBRE_PERMISO)}
+                        onChange={() =>
+                          toggleRolePermission(
+                            selectedRoleId,
+                            object.ID_OBJETO,
+                            object.NOMBRE_OBJETO,
+                            permission.ID_PERMISO,
+                            permission.NOMBRE_PERMISO
+                          )
+                        }
+                        disabled={!selectedRoleId || !canCreate}
+                      />
+                      <span>{permission.NOMBRE_PERMISO}</span>
+                    </label>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -368,12 +374,19 @@ export const AdminUsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const getDefaultServiceId = () =>
     String(
       services.find((service) => service.NOMBRE_SERVICIO === 'Informatica')?.ID_SERVICIO ||
       services[0]?.ID_SERVICIO ||
       ''
     );
+  const totalPages = Math.max(1, Math.ceil(users.length / itemsPerPage));
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return users.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, itemsPerPage, users]);
 
   const loadSecurityData = async () => {
     setIsLoading(true);
@@ -411,6 +424,16 @@ export const AdminUsersPage = () => {
   useEffect(() => {
     loadSecurityData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const resetForm = () => {
     setFormData({
@@ -550,7 +573,7 @@ export const AdminUsersPage = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((listedUser) => (
+            {paginatedUsers.map((listedUser) => (
               <tr key={listedUser.CODIGO}>
                 <td data-label="Usuario">
                   <strong>{listedUser.NOMBRE}</strong>
@@ -586,6 +609,14 @@ export const AdminUsersPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={users.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       <UserEditModal
         isOpen={isUserModalOpen}

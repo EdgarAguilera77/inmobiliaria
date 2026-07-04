@@ -3,6 +3,11 @@ import axios from 'axios';
 import { companyProfile } from '../constants/realEstateSeed';
 import { API_BASE } from '../constants/api';
 const DEFAULT_COMMISSION_RATE = 5;
+const DEFAULT_PLATFORM_FEE_RATE = 5;
+const parsePercentOrFallback = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isNaN(numericValue) ? fallback : numericValue;
+};
 
 const RealEstateContext = createContext();
 
@@ -59,6 +64,7 @@ const mapProperty = (property) => ({
   active: Number(property.ACTIVA) === 1,
   commercialStatus: property.ESTADO_COMERCIAL || (Number(property.ACTIVA) === 1 ? 'Disponible' : 'Inactiva'),
   publicationStatus: property.ESTADO_PUBLICACION || 'Borrador',
+  manualPublicationStatus: property.ESTADO_PUBLICACION_MANUAL || null,
   type: property.TIPO
     ? {
         name: property.TIPO.NOMBRE,
@@ -114,6 +120,10 @@ const mapSale = (sale) => ({
   businessType: sale.TIPO_NEGOCIO,
   commissionRate: Number(sale.PORCENTAJE_COMISION || 0),
   commissionAmount: Number(sale.MONTO_COMISION || 0),
+  agentCommissionRate: Number(sale.PORCENTAJE_PROPIETARIO || DEFAULT_PLATFORM_FEE_RATE),
+  agentCommissionAmount: Number(sale.MONTO_AGENTE || 0),
+  ownerCommissionRate: Number(sale.PORCENTAJE_AGENTE || (100 - DEFAULT_PLATFORM_FEE_RATE)),
+  ownerCommissionAmount: Number(sale.MONTO_PROPIETARIO || 0),
   closingDate: sale.FECHA_CIERRE,
   saleStatus: sale.ESTADO_VENTA,
   observations: sale.OBSERVACIONES || '',
@@ -136,6 +146,14 @@ const mapCommission = (commission) => ({
   closingDate: commission.FECHA_CIERRE,
   commissionRate: Number(commission.PORCENTAJE_COMISION || 0),
   amount: Number(commission.MONTO_COMISION || 0),
+  agentCommissionRate: Number(
+    commission.PORCENTAJE_PROPIETARIO || DEFAULT_PLATFORM_FEE_RATE
+  ),
+  agentCommissionAmount: Number(commission.MONTO_AGENTE || 0),
+  ownerCommissionRate: Number(
+    commission.PORCENTAJE_AGENTE || (100 - DEFAULT_PLATFORM_FEE_RATE)
+  ),
+  ownerCommissionAmount: Number(commission.MONTO_PROPIETARIO || 0),
   status: commission.ESTADO_COMISION,
   generatedAt: commission.FECHA_GENERACION,
   paidAt: commission.FECHA_PAGO || null,
@@ -196,6 +214,16 @@ const mapPublicationPayment = (payment) => ({
   createdAt: payment.FECHA_CREACION,
 });
 
+const mapCommissionSettings = (settings) => ({
+  id: settings.ID_CONFIGURACION || 1,
+  minimumRate: Number(settings.COMISION_MINIMA || DEFAULT_COMMISSION_RATE),
+  maximumRate: Number(settings.COMISION_MAXIMA || 15),
+  defaultRate: Number(settings.COMISION_POR_DEFECTO || DEFAULT_COMMISSION_RATE),
+  defaultAgentRate: Number(
+    settings.PORCENTAJE_AGENTE_POR_DEFECTO || DEFAULT_PLATFORM_FEE_RATE
+  ),
+});
+
 const uniqueImages = (images = [], coverImage = '') => {
   const normalized = [coverImage, ...images]
     .map((item) => (item || '').trim())
@@ -214,6 +242,13 @@ export const RealEstateProvider = ({ children }) => {
   const [plans, setPlans] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [publicationPayments, setPublicationPayments] = useState([]);
+  const [commissionSettings, setCommissionSettings] = useState({
+    id: 1,
+    minimumRate: DEFAULT_COMMISSION_RATE,
+    maximumRate: 15,
+    defaultRate: DEFAULT_COMMISSION_RATE,
+    defaultAgentRate: DEFAULT_PLATFORM_FEE_RATE,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -281,6 +316,11 @@ export const RealEstateProvider = ({ children }) => {
     setPublicationPayments(response.data.map(mapPublicationPayment));
   };
 
+  const refreshCommissionSettings = async () => {
+    const response = await api.get('/comisiones/configuracion');
+    setCommissionSettings(mapCommissionSettings(response.data));
+  };
+
   const refreshAll = async () => {
     setIsLoading(true);
     setError('');
@@ -296,6 +336,7 @@ export const RealEstateProvider = ({ children }) => {
         refreshPlans(),
         refreshSubscriptions(),
         refreshPublicationPayments(),
+        refreshCommissionSettings(),
       ]);
     } catch (fetchError) {
       console.error('Error al cargar datos inmobiliarios:', fetchError);
@@ -348,6 +389,7 @@ export const RealEstateProvider = ({ children }) => {
       IMAGEN_PORTADA: property.coverImage,
       DESTACADA: property.featured ? 1 : 0,
       ACTIVA: property.active ? 1 : 0,
+      ESTADO_COMERCIAL: property.commercialStatus || 'Disponible',
       ESTADO_PUBLICACION: property.publicationStatus || 'Borrador',
     };
 
@@ -374,6 +416,11 @@ export const RealEstateProvider = ({ children }) => {
 
   const togglePropertyActive = async (propertyId) => {
     await api.patch(`/propiedades/${propertyId}/toggle-activa`);
+    await refreshProperties();
+  };
+
+  const togglePropertyPublication = async (propertyId) => {
+    await api.patch(`/propiedades/${propertyId}/toggle-publicacion`);
     await refreshProperties();
   };
 
@@ -563,7 +610,11 @@ export const RealEstateProvider = ({ children }) => {
       CORREO_CLIENTE: sale.clientEmail || null,
       PRECIO_CIERRE: Number(sale.closingPrice) || 0,
       TIPO_NEGOCIO: sale.businessType,
-      PORCENTAJE_COMISION: Number(sale.commissionRate) || DEFAULT_COMMISSION_RATE,
+      PORCENTAJE_COMISION: parsePercentOrFallback(sale.commissionRate, DEFAULT_COMMISSION_RATE),
+      PORCENTAJE_AGENTE: parsePercentOrFallback(
+        sale.agentCommissionRate,
+        DEFAULT_PLATFORM_FEE_RATE
+      ),
       FECHA_CIERRE: sale.closingDate,
       OBSERVACIONES: sale.observations || null,
       USUARIO_CREACION: sale.userId || null,
@@ -581,7 +632,11 @@ export const RealEstateProvider = ({ children }) => {
       CORREO_CLIENTE: sale.clientEmail || null,
       PRECIO_CIERRE: Number(sale.closingPrice) || 0,
       TIPO_NEGOCIO: sale.businessType,
-      PORCENTAJE_COMISION: Number(sale.commissionRate) || DEFAULT_COMMISSION_RATE,
+      PORCENTAJE_COMISION: parsePercentOrFallback(sale.commissionRate, DEFAULT_COMMISSION_RATE),
+      PORCENTAJE_AGENTE: parsePercentOrFallback(
+        sale.agentCommissionRate,
+        DEFAULT_PLATFORM_FEE_RATE
+      ),
       FECHA_CIERRE: sale.closingDate,
       ESTADO_VENTA: sale.saleStatus || 'Cerrada',
       OBSERVACIONES: sale.observations || null,
@@ -600,9 +655,27 @@ export const RealEstateProvider = ({ children }) => {
       ESTADO_COMISION: status,
       FECHA_PAGO: payload.paymentDate || null,
       OBSERVACIONES_PAGO: payload.paymentNotes || null,
+      PORCENTAJE_PAGINA:
+        payload.platformRate === '' || payload.platformRate === undefined
+          ? null
+          : parsePercentOrFallback(payload.platformRate, DEFAULT_PLATFORM_FEE_RATE),
     });
 
     await Promise.all([refreshSales(), refreshCommissions()]);
+  };
+
+  const saveCommissionSettings = async (settings) => {
+    await api.put('/comisiones/configuracion', {
+      COMISION_MINIMA: Number(settings.minimumRate) || DEFAULT_COMMISSION_RATE,
+      COMISION_MAXIMA: Number(settings.maximumRate) || 15,
+      COMISION_POR_DEFECTO: Number(settings.defaultRate) || DEFAULT_COMMISSION_RATE,
+      PORCENTAJE_AGENTE_POR_DEFECTO: parsePercentOrFallback(
+        settings.defaultAgentRate,
+        DEFAULT_PLATFORM_FEE_RATE
+      ),
+    });
+
+    await refreshCommissionSettings();
   };
 
   const resetRealEstateData = async () => {
@@ -621,12 +694,14 @@ export const RealEstateProvider = ({ children }) => {
     plans,
     subscriptions,
     publicationPayments,
+    commissionSettings,
     isLoading,
     error,
     saveProperty,
     deleteProperty,
     togglePropertyFeatured,
     togglePropertyActive,
+    togglePropertyPublication,
     saveAgent,
     deleteAgent,
     savePropertyType,
@@ -642,6 +717,7 @@ export const RealEstateProvider = ({ children }) => {
     updateSale,
     deleteSale,
     updateCommissionStatus,
+    saveCommissionSettings,
     saveSubscription,
     deleteSubscription,
     savePublicationPayment,

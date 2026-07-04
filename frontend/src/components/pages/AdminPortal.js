@@ -44,7 +44,7 @@ const emptyZone = {
   description: '',
 };
 
-const createEmptySaleClosure = () => ({
+const createEmptySaleClosure = (commissionSettings = null) => ({
   propertyId: '',
   agentId: '',
   clientName: '',
@@ -53,7 +53,8 @@ const createEmptySaleClosure = () => ({
   clientEmail: '',
   closingPrice: '',
   businessType: 'Venta',
-  commissionRate: '5',
+  commissionRate: String(commissionSettings?.defaultRate ?? 5),
+  agentCommissionRate: String(commissionSettings?.defaultAgentRate ?? 5),
   closingDate: new Date().toISOString().slice(0, 10),
   observations: '',
 });
@@ -161,6 +162,13 @@ const CloseSaleModal = ({
 
   const estimatedCommission =
     (Number(formData.closingPrice || 0) * Number(formData.commissionRate || 0)) / 100;
+  const normalizedPlatformFeeRate = Math.min(
+    100,
+    Math.max(0, Number(formData.agentCommissionRate || 5))
+  );
+  const agentNetRate = Number((100 - normalizedPlatformFeeRate).toFixed(2));
+  const ownerCommissionAmount = (estimatedCommission * normalizedPlatformFeeRate) / 100;
+  const agentCommissionAmount = estimatedCommission - ownerCommissionAmount;
 
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
@@ -237,10 +245,17 @@ const CloseSaleModal = ({
             />
             <input
               value={formData.commissionRate}
-              onChange={() => {}}
+              onChange={(event) => setFormData({ ...formData, commissionRate: event.target.value })}
               placeholder="% comision"
               required
-              disabled
+            />
+            <input
+              value={formData.agentCommissionRate}
+              onChange={(event) =>
+                setFormData({ ...formData, agentCommissionRate: event.target.value })
+              }
+              placeholder="% pagina"
+              required
             />
             <input
               type="date"
@@ -256,8 +271,16 @@ const CloseSaleModal = ({
             placeholder="Observaciones"
           />
           <div className="admin-inline-summary">
-            <span>Comision estimada</span>
+            <span>Comision bruta del agente</span>
             <strong>{formatCurrency(estimatedCommission, 2)}</strong>
+          </div>
+          <div className="admin-inline-summary stack">
+            <span>
+              Retencion pagina: {normalizedPlatformFeeRate}% - <strong>{formatCurrency(ownerCommissionAmount, 2)}</strong>
+            </span>
+            <span>
+              Agente neto: {agentNetRate}% - <strong>{formatCurrency(agentCommissionAmount, 2)}</strong>
+            </span>
           </div>
           <div className="table-actions">
             <button type="submit" className="primary-button">
@@ -857,6 +880,7 @@ export const AdminPropertiesPage = () => {
   const { hasPermission, user } = useContext(AuthContext);
   const {
     agents,
+    commissionSettings,
     createSale,
     properties,
     propertyTypes,
@@ -865,6 +889,7 @@ export const AdminPropertiesPage = () => {
     saveProperty,
     deleteProperty,
     togglePropertyActive,
+    togglePropertyPublication,
     togglePropertyFeatured,
   } = useRealEstate();
   const canCreate = hasPermission('Propiedades', 'CREAR');
@@ -875,12 +900,38 @@ export const AdminPropertiesPage = () => {
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [imageError, setImageError] = useState('');
   const [saleProperty, setSaleProperty] = useState(null);
-  const [saleForm, setSaleForm] = useState(createEmptySaleClosure());
+  const [saleForm, setSaleForm] = useState(createEmptySaleClosure(commissionSettings));
+  const [statusTab, setStatusTab] = useState('Disponibles');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const propertyImagePreviews = useMemo(
     () => formData.images.filter(Boolean),
     [formData.images]
   );
+
+  const filteredProperties = useMemo(() => {
+    if (statusTab === 'Vendidas') {
+      return properties.filter((property) => property.commercialStatus === 'Vendida');
+    }
+
+    return properties.filter((property) => property.commercialStatus === 'Disponible');
+  }, [properties, statusTab]);
+  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / itemsPerPage));
+  const paginatedProperties = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProperties.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, filteredProperties, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage, statusTab]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const normalizeFiles = async (fileList) => {
     const files = Array.from(fileList || []);
@@ -978,7 +1029,7 @@ export const AdminPropertiesPage = () => {
   const openSaleModal = (property) => {
     setSaleProperty(property);
     setSaleForm({
-      ...createEmptySaleClosure(),
+      ...createEmptySaleClosure(commissionSettings),
       propertyId: String(property.id),
       agentId: String(property.agentId || ''),
       closingPrice: String(property.price || ''),
@@ -988,7 +1039,7 @@ export const AdminPropertiesPage = () => {
 
   const closeSaleModal = () => {
     setSaleProperty(null);
-    setSaleForm(createEmptySaleClosure());
+    setSaleForm(createEmptySaleClosure(commissionSettings));
   };
 
   const submitSale = async (event) => {
@@ -1030,14 +1081,35 @@ export const AdminPropertiesPage = () => {
       {imageError && <div className="feedback-banner error">{imageError}</div>}
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
-          <span>Propiedades registradas</span>
-          <strong>{properties.length}</strong>
+          <span>{statusTab === 'Vendidas' ? 'Propiedades vendidas' : 'Propiedades disponibles'}</span>
+          <strong>{filteredProperties.length}</strong>
         </div>
         {canCreate && (
           <button type="button" className="primary-button" onClick={openNewPropertyModal}>
             Nueva propiedad
           </button>
         )}
+      </div>
+      <div className="admin-history-toolbar">
+        <div className="table-actions">
+          <button
+            type="button"
+            className={`table-button ${statusTab === 'Disponibles' ? 'active-page' : 'ghost'}`}
+            onClick={() => setStatusTab('Disponibles')}
+          >
+            Disponibles
+          </button>
+          <button
+            type="button"
+            className={`table-button ${statusTab === 'Vendidas' ? 'active-page' : 'ghost'}`}
+            onClick={() => setStatusTab('Vendidas')}
+          >
+            Vendidas
+          </button>
+        </div>
+        <span className="history-counter">
+          {filteredProperties.length} {filteredProperties.length === 1 ? 'propiedad' : 'propiedades'}
+        </span>
       </div>
       <div className="admin-panel">
         <table className="admin-table">
@@ -1053,7 +1125,7 @@ export const AdminPropertiesPage = () => {
             </tr>
           </thead>
           <tbody>
-            {properties.map((property) => (
+            {paginatedProperties.map((property) => (
               <tr key={property.id}>
                 <td data-label="Propiedad">{property.title}</td>
                 <td data-label="Tipo">{property.type?.name}</td>
@@ -1068,6 +1140,17 @@ export const AdminPropertiesPage = () => {
                     canEdit={canCreate}
                     canDelete={canDelete}
                   >
+                    {canCreate && (
+                      <button
+                        type="button"
+                        className="table-button"
+                        onClick={() => togglePropertyPublication(property.id)}
+                      >
+                        {property.publicationStatus === 'Publicada'
+                          ? 'Pasar a borrador'
+                          : 'Publicar'}
+                      </button>
+                    )}
                     {canCreate && (
                       <button
                         type="button"
@@ -1101,6 +1184,14 @@ export const AdminPropertiesPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredProperties.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       <PropertyFormModal
         isOpen={isPropertyModalOpen}
@@ -1140,6 +1231,23 @@ export const AdminAgentsPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(agents.length / itemsPerPage));
+  const paginatedAgents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return agents.slice(startIndex, startIndex + itemsPerPage);
+  }, [agents, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const closeAgentModal = () => {
     setFormData(emptyAgent);
@@ -1211,7 +1319,7 @@ export const AdminAgentsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {agents.map((agent) => (
+            {paginatedAgents.map((agent) => (
               <tr key={agent.id}>
                 <td data-label="Agente">{agent.name}</td>
                 <td data-label="Especialidad">{agent.specialty}</td>
@@ -1233,6 +1341,14 @@ export const AdminAgentsPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={agents.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       <AgentFormModal
         isOpen={isAgentModalOpen}
@@ -1257,6 +1373,23 @@ export const AdminTypesPage = () => {
   const [formData, setFormData] = useState(emptyType);
   const [editingId, setEditingId] = useState(null);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(propertyTypes.length / itemsPerPage));
+  const paginatedTypes = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return propertyTypes.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, itemsPerPage, propertyTypes]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const closeTypeModal = () => {
     setFormData(emptyType);
@@ -1308,7 +1441,7 @@ export const AdminTypesPage = () => {
             </tr>
           </thead>
           <tbody>
-            {propertyTypes.map((type) => (
+            {paginatedTypes.map((type) => (
               <tr key={type.id}>
                 <td data-label="Tipo">{type.name}</td>
                 <td data-label="Descripcion">{type.description}</td>
@@ -1328,6 +1461,14 @@ export const AdminTypesPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={propertyTypes.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       <TypeFormModal
         isOpen={isTypeModalOpen}
@@ -1350,6 +1491,23 @@ export const AdminZonesPage = () => {
   const [formData, setFormData] = useState(emptyZone);
   const [editingId, setEditingId] = useState(null);
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(zones.length / itemsPerPage));
+  const paginatedZones = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return zones.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, itemsPerPage, zones]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const closeZoneModal = () => {
     setFormData(emptyZone);
@@ -1401,7 +1559,7 @@ export const AdminZonesPage = () => {
             </tr>
           </thead>
           <tbody>
-            {zones.map((zone) => (
+            {paginatedZones.map((zone) => (
               <tr key={zone.id}>
                 <td data-label="Zona">{zone.name}</td>
                 <td data-label="Ciudad">{zone.city}</td>
@@ -1421,6 +1579,14 @@ export const AdminZonesPage = () => {
             ))}
           </tbody>
         </table>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={zones.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       <ZoneFormModal
         isOpen={isZoneModalOpen}
@@ -1481,7 +1647,7 @@ export const AdminContactsPage = () => {
   const [statusTab, setStatusTab] = useState('Abiertas');
   const [sortOrder, setSortOrder] = useState('recent');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const propertyNameById = useMemo(
     () =>

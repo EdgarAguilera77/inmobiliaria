@@ -10,7 +10,7 @@ const {
 const basePropertySelect = `
   SELECT p.ID_PROPIEDAD, p.ID_TIPO_PROPIEDAD, p.ID_ZONA, p.ID_AGENTE, p.TITULO, p.SLUG, p.OPERACION,
          p.PRECIO, p.HABITACIONES, p.BANOS, p.ESTACIONAMIENTOS, p.AREA_M2, p.DIRECCION,
-         p.DESCRIPCION, p.IMAGEN_PORTADA, p.DESTACADA, p.ACTIVA, p.ESTADO_COMERCIAL, p.ESTADO_PUBLICACION, p.FECHA_PUBLICACION,
+         p.DESCRIPCION, p.IMAGEN_PORTADA, p.DESTACADA, p.ACTIVA, p.ESTADO_COMERCIAL, p.ESTADO_PUBLICACION, p.ESTADO_PUBLICACION_MANUAL, p.FECHA_PUBLICACION,
          p.FECHA_CREACION, p.FECHA_ACTUALIZACION,
          tp.NOMBRE AS TIPO_NOMBRE, tp.SLUG AS TIPO_SLUG,
          z.NOMBRE AS ZONA_NOMBRE, z.CIUDAD AS ZONA_CIUDAD, z.SLUG AS ZONA_SLUG,
@@ -21,6 +21,31 @@ const basePropertySelect = `
   INNER JOIN zonas z ON z.ID_ZONA = p.ID_ZONA
   INNER JOIN agentes a ON a.ID_AGENTE = p.ID_AGENTE
 `;
+
+const buildUniquePropertySlug = async (title, excludeId = null) => {
+  const baseSlug = slugify(title) || 'propiedad';
+  let candidateSlug = baseSlug;
+  let suffix = 2;
+
+  while (true) {
+    const params = [candidateSlug];
+    let query = 'SELECT ID_PROPIEDAD FROM propiedades WHERE SLUG = ?';
+
+    if (excludeId) {
+      query += ' AND ID_PROPIEDAD <> ?';
+      params.push(Number(excludeId));
+    }
+
+    const [rows] = await db.query(query, params);
+
+    if (!rows.length) {
+      return candidateSlug;
+    }
+
+    candidateSlug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+};
 
 const mapProperty = (row, images = []) => ({
   ID_PROPIEDAD: row.ID_PROPIEDAD,
@@ -42,6 +67,7 @@ const mapProperty = (row, images = []) => ({
   ACTIVA: row.ACTIVA,
   ESTADO_COMERCIAL: row.ESTADO_COMERCIAL,
   ESTADO_PUBLICACION: row.ESTADO_PUBLICACION,
+  ESTADO_PUBLICACION_MANUAL: row.ESTADO_PUBLICACION_MANUAL,
   FECHA_PUBLICACION: row.FECHA_PUBLICACION,
   FECHA_CREACION: row.FECHA_CREACION,
   FECHA_ACTUALIZACION: row.FECHA_ACTUALIZACION,
@@ -185,7 +211,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const slug = slugify(TITULO);
+    const slug = await buildUniquePropertySlug(TITULO);
     const [result] = await db.query(
       `INSERT INTO propiedades (
         ID_TIPO_PROPIEDAD, ID_ZONA, ID_AGENTE, TITULO, SLUG, OPERACION, PRECIO,
@@ -247,7 +273,7 @@ router.put('/:id', async (req, res) => {
   }
 
   try {
-    const slug = slugify(TITULO);
+    const slug = await buildUniquePropertySlug(TITULO, req.params.id);
     const [result] = await db.query(
       `UPDATE propiedades
        SET ID_TIPO_PROPIEDAD = ?, ID_ZONA = ?, ID_AGENTE = ?, TITULO = ?, SLUG = ?, OPERACION = ?,
@@ -327,6 +353,74 @@ router.patch('/:id/toggle-activa', async (req, res) => {
   } catch (error) {
     console.error('Error al cambiar activa:', error);
     res.status(500).json({ error: 'Error al cambiar activa' });
+  }
+});
+
+router.patch('/:id/toggle-publicacion', async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[property]] = await connection.query(
+      `SELECT ID_PROPIEDAD, ACTIVA, ESTADO_COMERCIAL, ESTADO_PUBLICACION, ESTADO_PUBLICACION_MANUAL
+       FROM propiedades
+       WHERE ID_PROPIEDAD = ?
+       FOR UPDATE`,
+      [req.params.id]
+    );
+
+    if (!property) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Propiedad no encontrada.' });
+    }
+
+    if (!property.ACTIVA || property.ESTADO_COMERCIAL !== 'Disponible') {
+      await connection.rollback();
+      return res.status(409).json({
+        error: 'Solo se puede cambiar manualmente la publicacion de propiedades activas y disponibles.',
+      });
+    }
+
+    const [[subscriptionControl]] = await connection.query(
+      `SELECT ID_SUSCRIPCION, ESTADO_SUSCRIPCION
+       FROM suscripciones_publicacion
+       WHERE ID_PROPIEDAD = ?
+         AND ESTADO_SUSCRIPCION IN ('Pendiente de pago', 'Activa', 'Vencida')
+       ORDER BY FECHA_FIN DESC, ID_SUSCRIPCION DESC
+       LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (subscriptionControl) {
+      await connection.rollback();
+      return res.status(409).json({
+        error:
+          'La publicacion de esta propiedad esta controlada por su suscripcion actual. Ajusta primero la suscripcion o el pago correspondiente.',
+      });
+    }
+
+    const nextManualState =
+      property.ESTADO_PUBLICACION === 'Publicada' ? 'Borrador' : 'Publicada';
+
+    await connection.query(
+      `UPDATE propiedades
+       SET ESTADO_PUBLICACION = ?, ESTADO_PUBLICACION_MANUAL = ?
+       WHERE ID_PROPIEDAD = ?`,
+      [nextManualState, nextManualState, req.params.id]
+    );
+
+    await connection.commit();
+    res.status(200).json({
+      message: `Estado de publicacion actualizado a ${nextManualState}.`,
+      estado: nextManualState,
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al cambiar publicacion manual:', error);
+    res.status(500).json({ error: 'Error al cambiar la publicacion de la propiedad.' });
+  } finally {
+    connection.release();
   }
 });
 

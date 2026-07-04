@@ -7,7 +7,7 @@ Al ingresar por primera vez al sistema, el usuario reconoce y acepta las condici
 
 1. El usuario declara que cuenta con autorizacion suficiente para publicar inmuebles, imagenes, documentos y datos relacionados con la propiedad.
 2. La publicacion de propiedades puede estar sujeta al pago de planes, suscripciones u otros cargos previamente informados por Global.
-3. Si una venta o negocio se concreta bajo la intermediacion, promocion o gestion de Global, el cliente acepta pagar una comision del 5% sobre el valor de cierre de la operacion.
+3. Si una venta o negocio se concreta bajo la intermediacion, promocion o gestion de Global, el vendedor acepta que Global retendra entre un 5% y un 15% sobre la comision generada por el agente en la operacion, segun el acuerdo aplicable.
 4. El usuario se obliga a brindar informacion veraz, actualizada y comprobable sobre la propiedad y su situacion juridica.
 5. Global podra pausar, rechazar o retirar publicaciones cuando detecte incumplimientos, falta de pago o informacion inconsistente.
 6. La aceptacion de este documento queda registrada con fecha, hora, usuario y version vigente para control interno y respaldo comercial.

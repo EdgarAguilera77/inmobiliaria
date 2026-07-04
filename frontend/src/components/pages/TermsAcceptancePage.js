@@ -66,7 +66,8 @@ const TermsAcceptancePage = () => {
             onChange={(event) => setHasAccepted(event.target.checked)}
           />
           <span>
-            Acepto las condiciones de uso, publicacion, suscripcion y la comision fija del 5%
+            Acepto las condiciones de uso, publicacion, suscripcion y la retencion comercial
+            aplicable dentro del rango del 5% al 15% sobre la comision generada por el agente
             cuando se concrete una operacion bajo gestion de Global.
           </span>
         </label>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { recalculatePropertyPublicationState } = require('../utils/publication');
+const { getCommissionSettings } = require('../utils/commissionSettings');
 
 const salesSelect = `
   SELECT
@@ -28,6 +29,10 @@ const salesSelect = `
     p.ESTADO_COMERCIAL AS PROPIEDAD_ESTADO_COMERCIAL,
     a.NOMBRE AS AGENTE_NOMBRE,
     c.ID_COMISION,
+    c.PORCENTAJE_AGENTE,
+    c.MONTO_AGENTE,
+    c.PORCENTAJE_PROPIETARIO,
+    c.MONTO_PROPIETARIO,
     c.ESTADO_COMISION,
     c.FECHA_PAGO
   FROM ventas_propiedades v
@@ -40,9 +45,38 @@ const getCommercialStatusByOperation = (operation) =>
   operation === 'Renta' ? 'Rentada' : 'Vendida';
 
 const DEFAULT_COMMISSION_RATE = 5;
+const DEFAULT_PLATFORM_SHARE_RATE = 5;
 
 const calculateCommissionAmount = (closingPrice, percentage) =>
   Number((Number(closingPrice || 0) * (Number(percentage || 0) / 100)).toFixed(2));
+
+const normalizePercentage = (value, fallback) => {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) {
+    return fallback;
+  }
+
+  return Math.min(100, Math.max(0, numericValue));
+};
+
+const calculateCommissionSplit = (commissionAmount, platformFeeRate) => {
+  const normalizedPlatformFeeRate = normalizePercentage(
+    platformFeeRate,
+    DEFAULT_PLATFORM_SHARE_RATE
+  );
+  const agentNetRate = Number((100 - normalizedPlatformFeeRate).toFixed(2));
+  const ownerAmount = Number(
+    (Number(commissionAmount || 0) * (normalizedPlatformFeeRate / 100)).toFixed(2)
+  );
+  const agentAmount = Number((Number(commissionAmount || 0) - ownerAmount).toFixed(2));
+
+  return {
+    normalizedPlatformFeeRate,
+    agentNetRate,
+    agentAmount,
+    ownerAmount,
+  };
+};
 
 router.get('/', async (req, res) => {
   try {
@@ -99,6 +133,7 @@ router.post('/', async (req, res) => {
     PRECIO_CIERRE,
     TIPO_NEGOCIO,
     PORCENTAJE_COMISION,
+    PORCENTAJE_AGENTE,
     FECHA_CIERRE,
     OBSERVACIONES = null,
     USUARIO_CREACION = null,
@@ -133,9 +168,21 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'La propiedad ya no esta disponible para cerrar un negocio.' });
     }
 
+    const commissionSettings = await getCommissionSettings(connection);
     const saleOperation = TIPO_NEGOCIO || property.OPERACION;
-    const normalizedCommissionRate = Number(PORCENTAJE_COMISION) || DEFAULT_COMMISSION_RATE;
+    const requestedCommissionRate = Number(PORCENTAJE_COMISION);
+    const normalizedCommissionRate = Number.isNaN(requestedCommissionRate)
+      ? commissionSettings.defaultRate
+      : normalizePercentage(requestedCommissionRate, commissionSettings.defaultRate);
+    const requestedPlatformFeeRate = Number(PORCENTAJE_AGENTE);
+    const normalizedPlatformFeeRate = Number.isNaN(requestedPlatformFeeRate)
+      ? commissionSettings.defaultAgentRate
+      : Math.min(
+          commissionSettings.maximumRate,
+          Math.max(commissionSettings.minimumRate, requestedPlatformFeeRate)
+        );
     const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, normalizedCommissionRate);
+    const commissionSplit = calculateCommissionSplit(commissionAmount, normalizedPlatformFeeRate);
     const propertyCommercialStatus = getCommercialStatusByOperation(saleOperation);
 
     const [saleResult] = await connection.query(
@@ -165,9 +212,20 @@ router.post('/', async (req, res) => {
 
     await connection.query(
       `INSERT INTO comisiones (
-        ID_VENTA, ID_AGENTE, PORCENTAJE_COMISION, MONTO_COMISION, ESTADO_COMISION
-      ) VALUES (?, ?, ?, ?, 'Pendiente')`,
-      [saleResult.insertId, ID_AGENTE, normalizedCommissionRate, commissionAmount]
+        ID_VENTA, ID_AGENTE, PORCENTAJE_COMISION, MONTO_COMISION,
+        PORCENTAJE_AGENTE, MONTO_AGENTE, PORCENTAJE_PROPIETARIO, MONTO_PROPIETARIO,
+        ESTADO_COMISION
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente')`,
+      [
+        saleResult.insertId,
+        ID_AGENTE,
+        normalizedCommissionRate,
+        commissionAmount,
+        commissionSplit.agentNetRate,
+        commissionSplit.agentAmount,
+        commissionSplit.normalizedPlatformFeeRate,
+        commissionSplit.ownerAmount,
+      ]
     );
 
     await connection.query(
@@ -185,6 +243,8 @@ router.post('/', async (req, res) => {
       message: 'Venta registrada con exito',
       id: saleResult.insertId,
       montoComision: commissionAmount,
+      montoAgente: commissionSplit.agentAmount,
+      montoPropietario: commissionSplit.ownerAmount,
       estadoPropiedad: propertyCommercialStatus,
     });
   } catch (error) {
@@ -206,6 +266,7 @@ router.put('/:id', async (req, res) => {
     PRECIO_CIERRE,
     TIPO_NEGOCIO,
     PORCENTAJE_COMISION,
+    PORCENTAJE_AGENTE,
     FECHA_CIERRE,
     ESTADO_VENTA = 'Cerrada',
     OBSERVACIONES = null,
@@ -234,8 +295,20 @@ router.put('/:id', async (req, res) => {
     }
 
     const sale = salesRows[0];
-    const normalizedCommissionRate = Number(PORCENTAJE_COMISION) || DEFAULT_COMMISSION_RATE;
+    const commissionSettings = await getCommissionSettings(connection);
+    const requestedCommissionRate = Number(PORCENTAJE_COMISION);
+    const normalizedCommissionRate = Number.isNaN(requestedCommissionRate)
+      ? commissionSettings.defaultRate
+      : normalizePercentage(requestedCommissionRate, commissionSettings.defaultRate);
+    const requestedPlatformFeeRate = Number(PORCENTAJE_AGENTE);
+    const normalizedPlatformFeeRate = Number.isNaN(requestedPlatformFeeRate)
+      ? commissionSettings.defaultAgentRate
+      : Math.min(
+          commissionSettings.maximumRate,
+          Math.max(commissionSettings.minimumRate, requestedPlatformFeeRate)
+        );
     const commissionAmount = calculateCommissionAmount(PRECIO_CIERRE, normalizedCommissionRate);
+    const commissionSplit = calculateCommissionSplit(commissionAmount, normalizedPlatformFeeRate);
     const propertyCommercialStatus =
       ESTADO_VENTA === 'Anulada' ? 'Disponible' : getCommercialStatusByOperation(TIPO_NEGOCIO);
 
@@ -264,9 +337,19 @@ router.put('/:id', async (req, res) => {
 
     await connection.query(
       `UPDATE comisiones
-       SET ID_AGENTE = ?, PORCENTAJE_COMISION = ?, MONTO_COMISION = ?
+       SET ID_AGENTE = ?, PORCENTAJE_COMISION = ?, MONTO_COMISION = ?,
+           PORCENTAJE_AGENTE = ?, MONTO_AGENTE = ?, PORCENTAJE_PROPIETARIO = ?, MONTO_PROPIETARIO = ?
        WHERE ID_VENTA = ?`,
-      [ID_AGENTE, normalizedCommissionRate, commissionAmount, req.params.id]
+      [
+        ID_AGENTE,
+        normalizedCommissionRate,
+        commissionAmount,
+        commissionSplit.agentNetRate,
+        commissionSplit.agentAmount,
+        commissionSplit.normalizedPlatformFeeRate,
+        commissionSplit.ownerAmount,
+        req.params.id,
+      ]
     );
 
     await connection.query(
@@ -279,7 +362,12 @@ router.put('/:id', async (req, res) => {
     await recalculatePropertyPublicationState(sale.ID_PROPIEDAD, connection);
 
     await connection.commit();
-    res.status(200).json({ message: 'Venta actualizada con exito', montoComision: commissionAmount });
+    res.status(200).json({
+      message: 'Venta actualizada con exito',
+      montoComision: commissionAmount,
+      montoAgente: commissionSplit.agentAmount,
+      montoPropietario: commissionSplit.ownerAmount,
+    });
   } catch (error) {
     await connection.rollback();
     console.error('Error al actualizar venta:', error);

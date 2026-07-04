@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
         version: 'v1.0',
         title: 'Terminos y condiciones de primer ingreso',
         text:
-          'Debes aceptar las condiciones comerciales de publicacion, suscripcion y la comision fija del 5% antes de utilizar el sistema.',
+          'Debes aceptar las condiciones comerciales de publicacion, suscripcion y la retencion comercial que Global puede aplicar entre el 5% y el 15% sobre la comision generada por el agente antes de utilizar el sistema.',
       };
       setRequiresTermsAcceptance(Boolean(fallbackRequired));
       setTermsDocument(documentFallback);

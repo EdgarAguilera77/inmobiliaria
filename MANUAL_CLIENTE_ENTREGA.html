@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manual de Usuario - Global Consultores Inmobiliarios</title>
+    <style>
+      :root {
+        --primary: #1f4f46;
+        --primary-dark: #173a34;
+        --accent: #d7a24a;
+        --ink: #1d2421;
+        --muted: #5d6d67;
+        --bg: #f7f4ee;
+        --panel: #ffffff;
+        --line: #d8d5cf;
+        --soft: #edf2ef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #fbfaf7 0%, #f2ece1 100%);
+        line-height: 1.65;
+      }
+
+      .document-shell {
+        width: min(1100px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 32px 0 72px;
+      }
+
+      .page {
+        background: var(--panel);
+        border: 1px solid rgba(31, 79, 70, 0.08);
+        border-radius: 28px;
+        box-shadow: 0 30px 60px rgba(24, 34, 31, 0.08);
+        padding: 48px;
+        margin-bottom: 28px;
+      }
+
+      .cover {
+        min-height: calc(100vh - 100px);
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 36px;
+        align-items: stretch;
+      }
+
+      .cover-main {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 8px 0;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(31, 79, 70, 0.08);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .brand-logo {
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        object-fit: cover;
+        border: 1px solid rgba(31, 79, 70, 0.08);
+        box-shadow: 0 12px 24px rgba(26, 36, 33, 0.08);
+      }
+
+      .brand-copy h1 {
+        margin: 0;
+        font-size: 42px;
+        line-height: 1;
+        color: var(--primary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-copy p {
+        margin: 10px 0 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .cover h2 {
+        margin: 18px 0 16px;
+        font-size: 44px;
+        line-height: 1.05;
+        color: var(--ink);
+      }
+
+      .cover .lead {
+        font-size: 18px;
+        color: var(--muted);
+        max-width: 58ch;
+        margin-bottom: 28px;
+      }
+
+      .cover-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric {
+        padding: 18px;
+        border-radius: 22px;
+        background: var(--soft);
+        border: 1px solid rgba(31, 79, 70, 0.08);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 15px;
+        color: var(--primary);
+        margin-bottom: 6px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .cover-side {
+        border-radius: 28px;
+        background:
+          linear-gradient(180deg, rgba(31, 79, 70, 0.94), rgba(23, 58, 52, 0.98)),
+          var(--primary);
+        color: #fff;
+        padding: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cover-side::before,
+      .cover-side::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .cover-side::before {
+        width: 240px;
+        height: 240px;
+        top: -60px;
+        right: -90px;
+      }
+
+      .cover-side::after {
+        width: 180px;
+        height: 180px;
+        bottom: -40px;
+        left: -60px;
+      }
+
+      .cover-side h3 {
+        margin: 0 0 16px;
+        font-size: 24px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .cover-side ul {
+        margin: 0;
+        padding-left: 18px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .cover-side li {
+        margin-bottom: 10px;
+      }
+
+      .meta-box {
+        margin-top: 28px;
+        padding: 18px 20px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.08);
+        position: relative;
+        z-index: 1;
+      }
+
+      .meta-box p {
+        margin: 6px 0;
+      }
+
+      h2.section-title {
+        margin: 0 0 12px;
+        font-size: 30px;
+        color: var(--primary);
+      }
+
+      h3 {
+        margin: 28px 0 10px;
+        font-size: 22px;
+        color: var(--ink);
+      }
+
+      h4 {
+        margin: 22px 0 8px;
+        font-size: 18px;
+        color: var(--primary-dark);
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      .toc {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 36px;
+      }
+
+      .toc-group {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: #fffdfa;
+      }
+
+      .toc-group h3 {
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-size: 18px;
+      }
+
+      .toc-group a {
+        display: block;
+        color: var(--ink);
+        text-decoration: none;
+        padding: 6px 0;
+      }
+
+      .toc-group a:hover {
+        color: var(--primary);
+      }
+
+      .info-box,
+      .warning-box {
+        border-radius: 22px;
+        padding: 20px 22px;
+        margin: 18px 0 22px;
+      }
+
+      .info-box {
+        background: rgba(31, 79, 70, 0.06);
+        border: 1px solid rgba(31, 79, 70, 0.12);
+      }
+
+      .warning-box {
+        background: rgba(215, 162, 74, 0.12);
+        border: 1px solid rgba(215, 162, 74, 0.24);
+      }
+
+      .figure-card {
+        margin: 22px 0 28px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(31, 79, 70, 0.08);
+        background: linear-gradient(180deg, #fffdfa, #f6f0e6);
+      }
+
+      .figure-card img {
+        width: 100%;
+        border-radius: 18px;
+        display: block;
+        border: 1px solid rgba(31, 79, 70, 0.08);
+      }
+
+      .figure-card figcaption {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .two-column {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+      }
+
+      .steps,
+      .plain-list {
+        padding-left: 22px;
+        margin: 0 0 14px;
+      }
+
+      .steps li,
+      .plain-list li {
+        margin-bottom: 8px;
+      }
+
+      .process-card {
+        border: 1px solid rgba(31, 79, 70, 0.1);
+        background: #fffdfa;
+        border-radius: 24px;
+        padding: 24px;
+        margin: 20px 0;
+      }
+
+      .process-card h4 {
+        margin-top: 0;
+      }
+
+      .formal-note {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 18px 18px 0;
+        background: rgba(215, 162, 74, 0.1);
+        color: var(--primary-dark);
+      }
+
+      .footer-note {
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .document-shell {
+          width: 100%;
+          padding: 0;
+        }
+
+        .page {
+          box-shadow: none;
+          border: none;
+          border-radius: 0;
+          margin: 0;
+          min-height: 100vh;
+          page-break-after: always;
+          break-after: page;
+        }
+
+        .page:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+
+        .figure-card,
+        .process-card,
+        .info-box,
+        .warning-box,
+        .toc-group,
+        .meta-box,
+        .formal-note {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .figure-card img {
+          max-height: 78vh;
+          object-fit: contain;
+        }
+
+        h2,
+        h3,
+        h4 {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+
+        p,
+        li,
+        figcaption {
+          orphans: 3;
+          widows: 3;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .document-shell {
+          width: min(100%, calc(100% - 24px));
+          padding: 12px 0 40px;
+        }
+
+        .page {
+          padding: 28px 22px;
+          border-radius: 22px;
+        }
+
+        .cover,
+        .toc,
+        .two-column {
+          grid-template-columns: 1fr;
+        }
+
+        .cover h2 {
+          font-size: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="document-shell">
+      <section class="page cover">
+        <div class="cover-main">
+          <div>
+            <span class="eyebrow">Manual institucional</span>
+            <div class="brand-row">
+              <img
+                src="frontend/src/assets/JM.jpeg"
+                alt="Global Consultores Inmobiliarios"
+                class="brand-logo"
+              />
+              <div class="brand-copy">
+                <h1>Global</h1>
+                <p>Consultores inmobiliarios y servicios integrales</p>
+              </div>
+            </div>
+            <h2>Manual de usuario final del sistema inmobiliario</h2>
+            <p class="lead">
+              Documento institucional de referencia para la operacion comercial y administrativa
+              de Global Consultores Inmobiliarios y Servicios Integrales. Presenta el uso del
+              sitio publico, el panel administrativo y el flujo correcto para registrar,
+              suscribir y publicar propiedades dentro de la plataforma.
+            </p>
+            <div class="cover-grid">
+              <div class="metric">
+                <strong>Alcance</strong>
+                <span>Sitio publico y panel administrativo</span>
+              </div>
+              <div class="metric">
+                <strong>Perfil objetivo</strong>
+                <span>Usuarios finales, operadores y administradores</span>
+              </div>
+              <div class="metric">
+                <strong>Empresa</strong>
+                <span>Global Consultores Inmobiliarios y Servicios Integrales</span>
+              </div>
+              <div class="metric">
+                <strong>Uso sugerido</strong>
+                <span>Capacitacion, consulta diaria e induccion</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-note">
+            Documento preparado para entrega formal, impresion institucional y exportacion a PDF.
+          </div>
+        </div>
+
+        <aside class="cover-side">
+          <h3>Contenido principal</h3>
+          <ul>
+            <li>Ingreso al sistema.</li>
+            <li>Navegacion del sitio publico.</li>
+            <li>Registro de propiedades.</li>
+            <li>Publicacion mediante suscripcion y pago.</li>
+            <li>Gestion de ventas, comisiones y solicitudes.</li>
+            <li>Seguridad, usuarios y aceptaciones legales.</li>
+          </ul>
+
+          <div class="meta-box">
+            <p><strong>Documento:</strong> Manual institucional de usuario final</p>
+            <p><strong>Cliente:</strong> Global Consultores Inmobiliarios</p>
+            <p><strong>Fecha:</strong> Junio 2026</p>
+            <p><strong>Formato:</strong> Version de entrega al cliente</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="page" id="indice">
+        <span class="eyebrow">Indice</span>
+        <h2 class="section-title">Tabla de contenido</h2>
+        <div class="toc">
+          <div class="toc-group">
+            <h3>Parte 1. Vision general</h3>
+            <a href="#introduccion">1. Introduccion y objetivo</a>
+            <a href="#alcance">2. Alcance del sistema</a>
+            <a href="#requisitos">3. Requisitos de uso</a>
+            <a href="#acceso">4. Acceso al sistema</a>
+            <a href="#primer-ingreso">5. Primer ingreso</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 2. Sitio publico</h3>
+            <a href="#sitio-publico">6. Navegacion del sitio publico</a>
+            <a href="#propiedades-publicas">7. Consulta de propiedades</a>
+            <a href="#detalle-publico">8. Detalle de propiedad</a>
+            <a href="#contacto-publico">9. Formulario de contacto</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 3. Panel administrativo</h3>
+            <a href="#panel-admin">10. Estructura del panel</a>
+            <a href="#dashboard">11. Dashboard</a>
+            <a href="#propiedades-admin">12. Modulo de propiedades</a>
+            <a href="#publicar-propiedad">13. Como crear y publicar una propiedad</a>
+            <a href="#agentes-admin">14. Modulo de agentes</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 4. Operacion comercial</h3>
+            <a href="#catalogos-admin">15. Catalogos</a>
+            <a href="#suscripciones">16. Suscripciones</a>
+            <a href="#pagos">17. Pagos de publicacion</a>
+            <a href="#ventas">18. Ventas</a>
+            <a href="#comisiones">19. Comisiones</a>
+            <a href="#solicitudes">20. Solicitudes y contactos</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 5. Seguridad y control</h3>
+            <a href="#usuarios">21. Usuarios</a>
+            <a href="#roles">22. Roles y permisos</a>
+            <a href="#aceptaciones">23. Aceptaciones legales</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 6. Cierre</h3>
+            <a href="#buenas-practicas">24. Buenas practicas</a>
+            <a href="#errores-frecuentes">25. Problemas frecuentes</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="introduccion">
+        <span class="eyebrow">Parte 1</span>
+        <h2 class="section-title">1. Introduccion y objetivo</h2>
+        <p>
+          El sistema inmobiliario de Global Consultores Inmobiliarios y Servicios Integrales
+          fue desarrollado para centralizar la gestion comercial, administrativa y operativa
+          de propiedades en una sola plataforma.
+        </p>
+        <p>
+          Este manual orienta al usuario final en el uso correcto del sistema, tanto en el sitio
+          publico como en el panel administrativo, para facilitar la capacitacion y estandarizar
+          el proceso de trabajo.
+        </p>
+
+        <div class="formal-note">
+          El presente documento sirve como apoyo de induccion, consulta operativa y evidencia
+          funcional del alcance entregado al cliente.
+        </div>
+
+        <div class="info-box" id="alcance">
+          <strong>Alcance del documento</strong>
+          <p>
+            El manual cubre acceso al sistema, uso del sitio publico, manejo de propiedades,
+            agentes, catalogos, suscripciones, pagos, ventas, comisiones, solicitudes,
+            usuarios, roles y aceptaciones legales.
+          </p>
+        </div>
+
+        <h3 id="requisitos">2. Requisitos de uso</h3>
+        <ul class="plain-list">
+          <li>Navegador web actualizado.</li>
+          <li>Conexion estable a internet.</li>
+          <li>Credenciales de acceso para usuarios administrativos.</li>
+          <li>Autorizacion y permisos segun el rol asignado.</li>
+        </ul>
+      </section>
+
+      <section class="page" id="acceso">
+        <span class="eyebrow">Acceso</span>
+        <h2 class="section-title">3. Acceso al sistema</h2>
+        <div class="two-column">
+          <div>
+            <h3>3.1 Sitio publico</h3>
+            <p>Desde el sitio publico el visitante puede:</p>
+            <ul class="plain-list">
+              <li>Consultar la pagina de inicio.</li>
+              <li>Revisar propiedades publicadas.</li>
+              <li>Filtrar por tipo de propiedad.</li>
+              <li>Ver el detalle de una propiedad.</li>
+              <li>Contactar al equipo comercial.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>3.2 Panel administrativo</h3>
+            <ol class="steps">
+              <li>Ingresar a la opcion <strong>Login</strong>.</li>
+              <li>Escribir correo electronico y contrasena.</li>
+              <li>Presionar <strong>Iniciar sesion</strong>.</li>
+              <li>Continuar con cambio de contrasena o aceptacion de terminos si aplica.</li>
+            </ol>
+          </div>
+        </div>
+
+        <figure class="figure-card">
+          <img src="manual-assets/01-login.png" alt="Pantalla de login del sistema" />
+          <figcaption>
+            Figura 1. Pantalla de inicio de sesion para acceso al panel administrativo.
+          </figcaption>
+        </figure>
+
+        <h3 id="primer-ingreso">4. Primer ingreso</h3>
+        <p>
+          En el primer acceso, el usuario puede encontrar dos controles obligatorios:
+          cambio de contrasena y aceptacion de terminos y condiciones.
+        </p>
+        <ul class="plain-list">
+          <li><strong>Cambio de contrasena:</strong> se solicita cuando el sistema obliga a renovar la clave inicial.</li>
+          <li><strong>Aceptacion de terminos:</strong> registra formalmente la conformidad del usuario con las condiciones comerciales y operativas.</li>
+        </ul>
+      </section>
+
+      <section class="page" id="sitio-publico">
+        <span class="eyebrow">Parte 2</span>
+        <h2 class="section-title">5. Sitio publico</h2>
+        <p>
+          El sitio publico esta orientado a clientes y visitantes. Su finalidad es mostrar
+          las propiedades activas y permitir el contacto directo con la inmobiliaria.
+        </p>
+
+        <figure class="figure-card">
+          <img src="manual-assets/02-inicio-publico.png" alt="Inicio del sitio publico" />
+          <figcaption>
+            Figura 2. Pagina de inicio del sitio publico con accesos principales.
+          </figcaption>
+        </figure>
+
+        <h3 id="propiedades-publicas">5.1 Consulta de propiedades</h3>
+        <p>El visitante puede navegar en la seccion de propiedades para:</p>
+        <ul class="plain-list">
+          <li>Ver inmuebles disponibles.</li>
+          <li>Identificar propiedades destacadas.</li>
+          <li>Consultar ubicacion, precio y caracteristicas principales.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img
+            src="manual-assets/03-listado-propiedades-publico.png"
+            alt="Listado publico de propiedades"
+          />
+          <figcaption>
+            Figura 3. Catalogo publico con filtros por tipo, zona y operacion.
+          </figcaption>
+        </figure>
+
+        <h3 id="detalle-publico">5.2 Detalle de propiedad</h3>
+        <p>
+          Cada propiedad cuenta con una pantalla de detalle donde se muestran:
+        </p>
+        <ul class="plain-list">
+          <li>Galeria de imagenes.</li>
+          <li>Precio.</li>
+          <li>Ubicacion.</li>
+          <li>Habitaciones, banos, area y estacionamientos.</li>
+          <li>Descripcion.</li>
+          <li>Datos del agente asignado.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/04-detalle-propiedad.png" alt="Detalle de propiedad" />
+          <figcaption>
+            Figura 4. Vista detalle de una propiedad con galeria, agente y formulario.
+          </figcaption>
+        </figure>
+
+        <h3 id="contacto-publico">5.3 Formulario de contacto</h3>
+        <p>
+          El visitante puede enviar una solicitud desde la propiedad o desde la pagina de contacto.
+          La solicitud queda registrada en el modulo administrativo de solicitudes.
+        </p>
+
+        <figure class="figure-card">
+          <img src="manual-assets/05-formulario-contacto.png" alt="Formulario de contacto" />
+          <figcaption>
+            Figura 5. Formulario de contacto general disponible en el sitio publico.
+          </figcaption>
+        </figure>
+
+        <div class="warning-box">
+          <strong>Importante</strong>
+          <p>
+            Una propiedad solo sera visible en el sitio publico si esta activa y con estado de
+            publicacion <strong>Publicada</strong>.
+          </p>
+        </div>
+      </section>
+
+      <section class="page" id="panel-admin">
+        <span class="eyebrow">Parte 3</span>
+        <h2 class="section-title">6. Panel administrativo</h2>
+        <p>
+          El panel administrativo se organiza en modulos agrupados en el menu lateral:
+          Dashboard, Operacion comercial, Catalogos y Seguridad.
+        </p>
+
+        <figure class="figure-card">
+          <img src="manual-assets/06-dashboard-admin.png" alt="Dashboard administrativo" />
+          <figcaption>
+            Figura 6. Dashboard con resumen del estado del inventario y seguimiento comercial.
+          </figcaption>
+        </figure>
+
+        <figure class="figure-card">
+          <img src="manual-assets/07-menu-admin.png" alt="Menu lateral administrativo" />
+          <figcaption>
+            Figura 7. Menu lateral del panel administrativo con secciones agrupadas.
+          </figcaption>
+        </figure>
+
+        <h3 id="dashboard">6.1 Dashboard</h3>
+        <p>
+          Presenta un resumen ejecutivo del sistema con indicadores clave, como propiedades activas,
+          suscripciones, solicitudes, agentes activos, propiedades publicadas e ingresos por suscripcion.
+        </p>
+      </section>
+
+      <section class="page" id="propiedades-admin">
+        <span class="eyebrow">Operacion comercial</span>
+        <h2 class="section-title">7. Modulo de propiedades</h2>
+        <p>
+          Este modulo concentra la administracion principal del catalogo inmobiliario.
+          Permite crear, editar y actualizar el estado comercial y de publicacion de cada inmueble.
+        </p>
+
+        <h3>7.1 Datos principales</h3>
+        <ul class="plain-list">
+          <li>Titulo.</li>
+          <li>Operacion: venta o renta.</li>
+          <li>Tipo de propiedad.</li>
+          <li>Zona.</li>
+          <li>Agente.</li>
+          <li>Precio.</li>
+          <li>Area.</li>
+          <li>Caracteristicas fisicas.</li>
+          <li>Portada y galeria de imagenes.</li>
+        </ul>
+
+        <h3>7.2 Acciones disponibles</h3>
+        <ul class="plain-list">
+          <li>Crear nueva propiedad.</li>
+          <li>Editar propiedad existente.</li>
+          <li>Activar o desactivar.</li>
+          <li>Marcar o quitar destacada.</li>
+          <li>Cerrar venta o cerrar renta.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/08-propiedades-admin.png" alt="Listado administrativo de propiedades" />
+          <figcaption>
+            Figura 8. Listado central de propiedades con acciones rapidas por registro.
+          </figcaption>
+        </figure>
+
+        <figure class="figure-card">
+          <img src="manual-assets/09-modal-propiedad.png" alt="Modal de propiedad" />
+          <figcaption>
+            Figura 9. Formulario de edicion de propiedad con carga de portada y galeria.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="page" id="publicar-propiedad">
+        <span class="eyebrow">Proceso clave</span>
+        <h2 class="section-title">8. Como crear y publicar una propiedad</h2>
+        <p>
+          Este es el flujo operativo que el cliente debe comprender con claridad. Registrar la propiedad
+          no significa que automaticamente aparecera en la web. Para verla publicada se debe completar
+          el proceso comercial correspondiente.
+        </p>
+
+        <div class="process-card">
+          <h4>Paso 1. Crear la propiedad</h4>
+          <ol class="steps">
+            <li>Entrar al modulo <strong>Propiedades</strong>.</li>
+            <li>Presionar <strong>Nueva propiedad</strong>.</li>
+            <li>Completar el formulario con titulo, operacion, tipo, zona, agente, precio y direccion.</li>
+            <li>Subir la imagen de portada desde el equipo.</li>
+            <li>Subir las imagenes de galeria si se necesitan.</li>
+            <li>Guardar el registro.</li>
+          </ol>
+          <p>
+            Al terminar este paso, la propiedad queda registrada en el sistema, pero puede seguir en
+            estado de <strong>Borrador</strong> o <strong>Pendiente de pago</strong>, dependiendo de su flujo comercial.
+          </p>
+        </div>
+
+        <figure class="figure-card">
+          <img src="manual-assets/14-modal-nueva-propiedad.png" alt="Modal de nueva propiedad" />
+          <figcaption>
+            Figura 10. Formulario de nueva propiedad con datos comerciales, portada y galeria.
+          </figcaption>
+        </figure>
+
+        <div class="process-card">
+          <h4>Paso 2. Revisar la propiedad en el listado</h4>
+          <p>
+            Una vez guardada, la propiedad aparece en la tabla principal del modulo. Desde ese listado
+            el usuario puede confirmar:
+          </p>
+          <ul class="plain-list">
+            <li>Tipo y zona correctos.</li>
+            <li>Estado comercial.</li>
+            <li>Estado de publicacion.</li>
+            <li>Estado activo o inactivo.</li>
+          </ul>
+        </div>
+
+        <figure class="figure-card">
+          <img src="manual-assets/16-propiedad-publicada.png" alt="Propiedad publicada en el listado" />
+          <figcaption>
+            Figura 11. Confirmacion visual de la propiedad en estado activa y publicada.
+          </figcaption>
+        </figure>
+
+        <div class="process-card">
+          <h4>Paso 3. Crear una suscripcion para la propiedad</h4>
+          <ol class="steps">
+            <li>Entrar al modulo <strong>Suscripciones</strong>.</li>
+            <li>Presionar <strong>Nueva suscripcion</strong>.</li>
+            <li>Seleccionar la propiedad.</li>
+            <li>Seleccionar el plan de publicacion.</li>
+            <li>Confirmar vigencia, estado y observaciones.</li>
+            <li>Guardar la suscripcion.</li>
+          </ol>
+          <p>
+            La suscripcion define por cuanto tiempo la propiedad puede mantenerse expuesta y bajo que condiciones.
+          </p>
+        </div>
+
+        <figure class="figure-card">
+          <img src="manual-assets/15-modal-suscripcion.png" alt="Modal de nueva suscripcion" />
+          <figcaption>
+            Figura 12. Formulario de suscripcion con propiedad, plan, vigencia y estado comercial.
+          </figcaption>
+        </figure>
+
+        <div class="process-card">
+          <h4>Paso 4. Registrar el pago de publicacion si aplica</h4>
+          <p>
+            Si el plan requiere pago, se debe registrar en el modulo correspondiente. Este paso es importante
+            porque una propiedad puede permanecer en <strong>Pendiente de pago</strong> si el proceso comercial no se completa.
+          </p>
+        </div>
+
+        <figure class="figure-card">
+          <img src="manual-assets/13-modal-pagos.png" alt="Modal de nuevo pago" />
+          <figcaption>
+            Figura 13. Registro del pago de publicacion con monto, metodo, referencia y fecha.
+          </figcaption>
+        </figure>
+
+        <div class="process-card">
+          <h4>Paso 5. Confirmar que la propiedad quede publicada</h4>
+          <p>
+            Para que la propiedad aparezca en la web, se debe verificar en el listado de propiedades que cumpla estas condiciones:
+          </p>
+          <ul class="plain-list">
+            <li>Estado del registro: <strong>Activa</strong>.</li>
+            <li>Estado de publicacion: <strong>Publicada</strong>.</li>
+            <li>Imagen de portada cargada correctamente.</li>
+            <li>Datos comerciales completos.</li>
+          </ul>
+        </div>
+
+        <div class="warning-box">
+          <strong>Regla practica para el cliente</strong>
+          <p>
+            Si la propiedad ya fue creada pero no se ve en la web, normalmente el problema no esta en el formulario.
+            Lo primero que se debe revisar es si tiene suscripcion activa, pago procesado y estado de publicacion
+            <strong>Publicada</strong>.
+          </p>
+        </div>
+      </section>
+
+      <section class="page" id="agentes-admin">
+        <span class="eyebrow">Catalogos</span>
+        <h2 class="section-title">9. Modulo de agentes</h2>
+        <p>
+          Permite registrar a los asesores o responsables comerciales vinculados a las propiedades.
+        </p>
+        <ul class="plain-list">
+          <li>Nombre.</li>
+          <li>Cargo.</li>
+          <li>Telefono.</li>
+          <li>Correo.</li>
+          <li>Foto desde el equipo.</li>
+          <li>Especialidad.</li>
+          <li>Estado.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/10-agentes-admin.png" alt="Modulo de agentes" />
+          <figcaption>
+            Figura 14. Edicion de agente con fotografia cargada desde el equipo.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="page" id="catalogos-admin">
+        <span class="eyebrow">Catalogos</span>
+        <h2 class="section-title">10. Catalogos complementarios</h2>
+
+        <h3>10.1 Tipos</h3>
+        <p>Permite mantener categorias como casa, apartamento, terreno u otras definidas por el negocio.</p>
+
+        <h3>10.2 Zonas</h3>
+        <p>Organiza la cartera por ciudad o sector geografico.</p>
+
+        <h3>10.3 Imagenes</h3>
+        <p>Ofrece una vista de apoyo para validar el material grafico de las propiedades.</p>
+
+        <h3>10.4 Planes</h3>
+        <p>Administra las condiciones comerciales de publicacion, incluyendo precio, duracion y prioridad.</p>
+      </section>
+
+      <section class="page" id="suscripciones">
+        <span class="eyebrow">Parte 4</span>
+        <h2 class="section-title">11. Suscripciones</h2>
+        <p>
+          Este modulo vincula una propiedad con un plan de publicacion y permite controlar su vigencia.
+        </p>
+        <ul class="plain-list">
+          <li>Propiedad.</li>
+          <li>Plan asignado.</li>
+          <li>Precio final.</li>
+          <li>Fecha de inicio.</li>
+          <li>Fecha de fin.</li>
+          <li>Estado.</li>
+          <li>Auto renovar.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/11-suscripciones-admin.png" alt="Modulo de suscripciones" />
+          <figcaption>
+            Figura 15. Modulo de suscripciones con indicadores y propiedades suscritas.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="page" id="pagos">
+        <span class="eyebrow">Operacion comercial</span>
+        <h2 class="section-title">12. Pagos de publicacion</h2>
+        <p>
+          Se utiliza para registrar los pagos realizados por concepto de publicacion
+          o suscripcion de inmuebles.
+        </p>
+        <ul class="plain-list">
+          <li>Monto.</li>
+          <li>Metodo de pago.</li>
+          <li>Referencia.</li>
+          <li>Fecha.</li>
+          <li>Estado del pago.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/13-modal-pagos.png" alt="Registro de pagos de publicacion" />
+          <figcaption>
+            Figura 16. Modal de nuevo pago para completar el proceso de publicacion de una propiedad.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="page" id="ventas">
+        <span class="eyebrow">Operacion comercial</span>
+        <h2 class="section-title">13. Ventas</h2>
+        <p>
+          Permite documentar el cierre comercial de una propiedad, ya sea por venta o renta.
+        </p>
+        <ul class="plain-list">
+          <li>Propiedad.</li>
+          <li>Agente.</li>
+          <li>Cliente.</li>
+          <li>Precio de cierre.</li>
+          <li>Fecha de cierre.</li>
+          <li>Observaciones.</li>
+        </ul>
+      </section>
+
+      <section class="page" id="comisiones">
+        <span class="eyebrow">Operacion comercial</span>
+        <h2 class="section-title">14. Comisiones</h2>
+        <p>
+          El sistema contempla una comision fija comercial del <strong>5%</strong> sobre el valor de cierre,
+          segun la politica operativa definida.
+        </p>
+        <p>Este modulo permite revisar:</p>
+        <ul class="plain-list">
+          <li>Porcentaje aplicado.</li>
+          <li>Monto de comision.</li>
+          <li>Estado de pago.</li>
+          <li>Relacion con la venta registrada.</li>
+        </ul>
+      </section>
+
+      <section class="page" id="solicitudes">
+        <span class="eyebrow">Operacion comercial</span>
+        <h2 class="section-title">15. Solicitudes y contactos</h2>
+        <p>
+          Muestra las solicitudes enviadas desde el sitio publico.
+        </p>
+        <ul class="plain-list">
+          <li>Filtro por estado: abiertas o cerradas.</li>
+          <li>Orden por fecha.</li>
+          <li>Paginacion.</li>
+          <li>Cambio de estado.</li>
+          <li>Eliminacion segun permisos.</li>
+        </ul>
+
+        <figure class="figure-card">
+          <img src="manual-assets/12-solicitudes-admin.png" alt="Modulo de solicitudes" />
+          <figcaption>
+            Figura 17. Modulo de solicitudes y contactos con estado, fecha y acciones.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="page" id="usuarios">
+        <span class="eyebrow">Seguridad</span>
+        <h2 class="section-title">16. Usuarios</h2>
+        <p>
+          El modulo de usuarios permite crear y mantener las cuentas de acceso al sistema.
+        </p>
+        <ul class="plain-list">
+          <li>Nombre completo.</li>
+          <li>Identificacion.</li>
+          <li>Correo.</li>
+          <li>Contrasena.</li>
+          <li>Rol.</li>
+          <li>Estado.</li>
+          <li>Solicitud de aceptacion de terminos al primer ingreso.</li>
+        </ul>
+      </section>
+
+      <section class="page" id="roles">
+        <span class="eyebrow">Seguridad</span>
+        <h2 class="section-title">17. Roles y permisos</h2>
+        <p>
+          Este modulo define lo que cada perfil puede ver o gestionar dentro del sistema.
+        </p>
+        <p>Permisos administrados:</p>
+        <ul class="plain-list">
+          <li>VER</li>
+          <li>CREAR</li>
+          <li>ELIMINAR</li>
+        </ul>
+      </section>
+
+      <section class="page" id="aceptaciones">
+        <span class="eyebrow">Seguridad</span>
+        <h2 class="section-title">18. Aceptaciones legales</h2>
+        <p>
+          Conserva el historial de aceptacion de terminos y condiciones de primer ingreso.
+        </p>
+        <ul class="plain-list">
+          <li>Busqueda por usuario, correo o codigo.</li>
+          <li>Visualizacion del texto aceptado.</li>
+          <li>Impresion del documento.</li>
+          <li>Descarga en PDF.</li>
+        </ul>
+
+        <div class="info-box">
+          <strong>Control interno</strong>
+          <p>
+            Este historial queda registrado en la tabla <strong>aceptaciones_terminos</strong> de la base de datos.
+          </p>
+        </div>
+      </section>
+
+      <section class="page" id="buenas-practicas">
+        <span class="eyebrow">Parte 6</span>
+        <h2 class="section-title">19. Buenas practicas operativas</h2>
+        <ul class="plain-list">
+          <li>Verificar precios, estados y ubicaciones antes de publicar.</li>
+          <li>Asignar correctamente el agente responsable de cada propiedad.</li>
+          <li>Evitar compartir credenciales entre usuarios.</li>
+          <li>Cerrar sesion al finalizar la jornada.</li>
+          <li>Revisar periodicamente solicitudes, suscripciones y pagos.</li>
+          <li>Aplicar roles y permisos conforme a la responsabilidad de cada usuario.</li>
+        </ul>
+
+        <h3 id="errores-frecuentes">20. Problemas frecuentes</h3>
+        <h4>No puedo ingresar al panel</h4>
+        <ul class="plain-list">
+          <li>Verificar correo y contrasena.</li>
+          <li>Confirmar que el usuario este activo.</li>
+          <li>Revisar si el sistema solicita cambio de contrasena o aceptacion de terminos.</li>
+        </ul>
+
+        <h4>Una propiedad no aparece en la web</h4>
+        <ul class="plain-list">
+          <li>Confirmar que este activa.</li>
+          <li>Confirmar estado de publicacion <strong>Publicada</strong>.</li>
+          <li>Revisar si esta vencida, pausada o pendiente de pago.</li>
+        </ul>
+
+        <h4>No veo una opcion del menu</h4>
+        <ul class="plain-list">
+          <li>Es posible que el usuario no tenga permiso <strong>VER</strong> para ese modulo.</li>
+          <li>Puede tratarse de una restriccion del rol asignado.</li>
+        </ul>
+
+        <div class="warning-box">
+          <strong>Nota final</strong>
+          <p>
+            Este manual ya incorpora capturas reales del sistema y puede utilizarse como version
+            formal de entrega. Para presentarlo al cliente, basta con exportarlo a PDF desde el
+            navegador conservando el formato de impresion.
+          </p>
+        </div>
+
+        <p class="footer-note">
+          Global Consultores Inmobiliarios y Servicios Integrales - Manual institucional de usuario final
+        </p>
+      </section>
+    </div>
+  </body>
+</html>

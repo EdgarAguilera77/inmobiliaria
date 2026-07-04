@@ -11,6 +11,15 @@ const currencyFormatter = new Intl.NumberFormat('es-HN', {
 
 const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
 const DEFAULT_COMMISSION_RATE = 5;
+const DEFAULT_PLATFORM_FEE_RATE = 5;
+const clampPercent = (value, fallback) => {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) {
+    return fallback;
+  }
+
+  return Math.min(100, Math.max(0, numericValue));
+};
 
 const SectionHeader = ({ title, text }) => (
   <div className="admin-header">
@@ -36,7 +45,103 @@ const PermissionHint = ({ canCreate, canDelete }) => {
   return <div className="permission-hint">{message}</div>;
 };
 
-const useAdminPagination = (items, initialPageSize = 10) => {
+const CommissionSettingsModal = ({
+  isOpen,
+  formData,
+  setFormData,
+  onClose,
+  onSubmit,
+  canCreate,
+}) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <span className="section-chip">Comisiones</span>
+            <h3>Configurar parametros</h3>
+          </div>
+          <button type="button" className="table-button ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
+        <form className="compact-admin-form" onSubmit={onSubmit}>
+          <div className="admin-form-row">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.minimumRate}
+              onChange={(event) =>
+                setFormData({ ...formData, minimumRate: event.target.value })
+              }
+              placeholder="% minimo"
+              disabled={!canCreate}
+            />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.maximumRate}
+              onChange={(event) =>
+                setFormData({ ...formData, maximumRate: event.target.value })
+              }
+              placeholder="% maximo"
+              disabled={!canCreate}
+            />
+          </div>
+          <div className="admin-form-row">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.defaultRate}
+              onChange={(event) =>
+                setFormData({ ...formData, defaultRate: event.target.value })
+              }
+              placeholder="% por defecto"
+              disabled={!canCreate}
+            />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.defaultAgentRate}
+              onChange={(event) =>
+                setFormData({ ...formData, defaultAgentRate: event.target.value })
+              }
+              placeholder="% pagina por defecto"
+              disabled={!canCreate}
+            />
+          </div>
+          <div className="admin-inline-summary stack">
+            <span>Rango permitido para la pagina: {formData.minimumRate}% a {formData.maximumRate}%</span>
+            <span>Comision del agente por defecto: {formData.defaultRate}%</span>
+            <span>Retencion pagina por defecto: {formData.defaultAgentRate}%</span>
+          </div>
+          <div className="table-actions">
+            <button type="submit" className="primary-button" disabled={!canCreate}>
+              Guardar configuracion
+            </button>
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const useAdminPagination = (items, initialPageSize = 5) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialPageSize);
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -80,6 +185,19 @@ const SaleModal = ({
   if (!isOpen) {
     return null;
   }
+
+  const normalizedCommissionRate = clampPercent(formData.commissionRate, DEFAULT_COMMISSION_RATE);
+  const normalizedPlatformFeeRate = clampPercent(
+    formData.agentCommissionRate,
+    DEFAULT_PLATFORM_FEE_RATE
+  );
+  const normalizedAgentNetRate = Number((100 - normalizedPlatformFeeRate).toFixed(2));
+  const totalCommission = (
+    (Number(formData.closingPrice || 0) * normalizedCommissionRate) /
+    100
+  );
+  const ownerCommissionAmount = (totalCommission * normalizedPlatformFeeRate) / 100;
+  const agentCommissionAmount = totalCommission - ownerCommissionAmount;
 
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
@@ -160,10 +278,21 @@ const SaleModal = ({
             />
             <input
               value={formData.commissionRate}
-              onChange={() => {}}
+              onChange={(event) =>
+                setFormData({ ...formData, commissionRate: event.target.value })
+              }
               placeholder="% comision"
               required
-              disabled
+              disabled={!canCreate}
+            />
+            <input
+              value={formData.agentCommissionRate}
+              onChange={(event) =>
+                setFormData({ ...formData, agentCommissionRate: event.target.value })
+              }
+              placeholder="% pagina"
+              required
+              disabled={!canCreate}
             />
             <input
               type="date"
@@ -189,12 +318,16 @@ const SaleModal = ({
             disabled={!canCreate}
           />
           <div className="admin-inline-summary">
-            <span>Comision estimada</span>
-            <strong>
-              {formatMoney(
-                (Number(formData.closingPrice || 0) * Number(formData.commissionRate || 0)) / 100
-              )}
-            </strong>
+            <span>Comision bruta del agente</span>
+            <strong>{formatMoney(totalCommission)}</strong>
+          </div>
+          <div className="admin-inline-summary stack">
+            <span>
+              Retencion pagina: {normalizedPlatformFeeRate}% - <strong>{formatMoney(ownerCommissionAmount)}</strong>
+            </span>
+            <span>
+              Agente neto: {normalizedAgentNetRate}% - <strong>{formatMoney(agentCommissionAmount)}</strong>
+            </span>
           </div>
           <div className="table-actions">
             <button type="submit" className="primary-button" disabled={!canCreate}>
@@ -223,6 +356,15 @@ const CommissionModal = ({
     return null;
   }
 
+  const normalizedPlatformFeeRate = clampPercent(
+    formData.platformRate,
+    commission.agentCommissionRate || DEFAULT_PLATFORM_FEE_RATE
+  );
+  const normalizedAgentNetRate = Number((100 - normalizedPlatformFeeRate).toFixed(2));
+  const grossCommissionAmount = Number(commission.amount || 0);
+  const platformAmount = (grossCommissionAmount * normalizedPlatformFeeRate) / 100;
+  const agentNetAmount = grossCommissionAmount - platformAmount;
+
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
       <div className="admin-modal" onClick={(event) => event.stopPropagation()}>
@@ -237,9 +379,25 @@ const CommissionModal = ({
         </div>
         <div className="admin-inline-summary stack">
           <span>{commission.propertyTitle}</span>
-          <strong>{formatMoney(commission.amount)}</strong>
+          <strong>{formatMoney(grossCommissionAmount)}</strong>
+          <span>
+            Retencion pagina: {normalizedPlatformFeeRate}% - {formatMoney(platformAmount)}
+          </span>
+          <span>
+            Agente neto: {normalizedAgentNetRate}% - {formatMoney(agentNetAmount)}
+          </span>
         </div>
         <form className="compact-admin-form" onSubmit={onSubmit}>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={formData.platformRate}
+            onChange={(event) => setFormData({ ...formData, platformRate: event.target.value })}
+            placeholder="% pagina"
+            disabled={!canCreate}
+          />
           <select
             value={formData.status}
             onChange={(event) => setFormData({ ...formData, status: event.target.value })}
@@ -286,6 +444,7 @@ const defaultSaleForm = {
   closingPrice: '',
   businessType: 'Venta',
   commissionRate: String(DEFAULT_COMMISSION_RATE),
+  agentCommissionRate: String(DEFAULT_PLATFORM_FEE_RATE),
   closingDate: new Date().toISOString().slice(0, 10),
   saleStatus: 'Cerrada',
   observations: '',
@@ -293,7 +452,7 @@ const defaultSaleForm = {
 
 export const AdminSalesPage = () => {
   const { hasPermission, user } = useContext(AuthContext);
-  const { sales, agents, updateSale, deleteSale, isLoading } = useRealEstate();
+  const { sales, agents, commissionSettings, updateSale, deleteSale, isLoading } = useRealEstate();
   const canCreate = hasPermission('Ventas', 'CREAR');
   const canDelete = hasPermission('Ventas', 'ELIMINAR');
   const [editingSale, setEditingSale] = useState(null);
@@ -327,7 +486,10 @@ export const AdminSalesPage = () => {
       clientEmail: sale.clientEmail,
       closingPrice: String(sale.closingPrice),
       businessType: sale.businessType,
-      commissionRate: String(sale.commissionRate),
+      commissionRate: String(sale.commissionRate ?? commissionSettings.defaultRate),
+      agentCommissionRate: String(
+        sale.agentCommissionRate ?? commissionSettings.defaultAgentRate
+      ),
       closingDate: sale.closingDate ? String(sale.closingDate).slice(0, 10) : '',
       saleStatus: sale.saleStatus,
       observations: sale.observations,
@@ -402,7 +564,10 @@ export const AdminSalesPage = () => {
                 </td>
                 <td data-label="Comision">
                   <strong>{formatMoney(sale.commissionAmount)}</strong>
-                  <div>{sale.commissionRate}%</div>
+                  <div>{sale.commissionRate}% total</div>
+                  <div>
+                    Pagina {sale.agentCommissionRate}% | Agente neto {sale.ownerCommissionRate}%
+                  </div>
                 </td>
                 <td data-label="Estado">{sale.saleStatus}</td>
                 <td data-label="Acciones">
@@ -456,15 +621,32 @@ export const AdminSalesPage = () => {
 
 export const AdminCommissionsPage = () => {
   const { hasPermission } = useContext(AuthContext);
-  const { commissions, updateCommissionStatus, isLoading } = useRealEstate();
+  const { commissions, commissionSettings, saveCommissionSettings, updateCommissionStatus, isLoading } = useRealEstate();
   const canCreate = hasPermission('Comisiones', 'CREAR');
   const [selectedCommission, setSelectedCommission] = useState(null);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     status: 'Pendiente',
     paymentDate: '',
     paymentNotes: '',
+    platformRate: '',
+  });
+  const [settingsForm, setSettingsForm] = useState({
+    minimumRate: String(commissionSettings.minimumRate),
+    maximumRate: String(commissionSettings.maximumRate),
+    defaultRate: String(commissionSettings.defaultRate),
+    defaultAgentRate: String(commissionSettings.defaultAgentRate),
   });
   const pagination = useAdminPagination(commissions);
+
+  useEffect(() => {
+    setSettingsForm({
+      minimumRate: String(commissionSettings.minimumRate),
+      maximumRate: String(commissionSettings.maximumRate),
+      defaultRate: String(commissionSettings.defaultRate),
+      defaultAgentRate: String(commissionSettings.defaultAgentRate),
+    });
+  }, [commissionSettings]);
 
   const openCommissionModal = (commission) => {
     setSelectedCommission(commission);
@@ -472,6 +654,7 @@ export const AdminCommissionsPage = () => {
       status: commission.status,
       paymentDate: commission.paidAt ? String(commission.paidAt).slice(0, 10) : '',
       paymentNotes: commission.paymentNotes || '',
+      platformRate: String(commission.agentCommissionRate ?? commissionSettings.defaultAgentRate),
     });
   };
 
@@ -481,7 +664,22 @@ export const AdminCommissionsPage = () => {
       status: 'Pendiente',
       paymentDate: '',
       paymentNotes: '',
+      platformRate: '',
     });
+  };
+
+  const openSettingsModal = () => {
+    setSettingsForm({
+      minimumRate: String(commissionSettings.minimumRate),
+      maximumRate: String(commissionSettings.maximumRate),
+      defaultRate: String(commissionSettings.defaultRate),
+      defaultAgentRate: String(commissionSettings.defaultAgentRate),
+    });
+    setIsSettingsModalOpen(true);
+  };
+
+  const closeSettingsModal = () => {
+    setIsSettingsModalOpen(false);
   };
 
   const handleSubmit = async (event) => {
@@ -493,8 +691,15 @@ export const AdminCommissionsPage = () => {
     await updateCommissionStatus(selectedCommission.id, formData.status, {
       paymentDate: formData.paymentDate,
       paymentNotes: formData.paymentNotes,
+      platformRate: formData.platformRate,
     });
     resetCommissionModal();
+  };
+
+  const handleSettingsSubmit = async (event) => {
+    event.preventDefault();
+    await saveCommissionSettings(settingsForm);
+    closeSettingsModal();
   };
 
   const summary = useMemo(
@@ -535,6 +740,15 @@ export const AdminCommissionsPage = () => {
           <span>Comisiones registradas</span>
           <strong>{commissions.length}</strong>
         </div>
+        {canCreate && (
+          <button type="button" className="primary-button" onClick={openSettingsModal}>
+            Parametrizar comisiones
+          </button>
+        )}
+      </div>
+      <div className="admin-inline-summary stack">
+        <span>Rango de retencion pagina: {commissionSettings.minimumRate}% - {commissionSettings.maximumRate}%</span>
+        <span>Comision agente por defecto: {commissionSettings.defaultRate}% | Pagina por defecto: {commissionSettings.defaultAgentRate}%</span>
       </div>
       <div className="admin-panel">
         <table className="admin-table">
@@ -557,7 +771,9 @@ export const AdminCommissionsPage = () => {
                 <td data-label="Agente">{commission.agentName}</td>
                 <td data-label="Monto">
                   <strong>{formatMoney(commission.amount)}</strong>
-                  <div>{commission.commissionRate}%</div>
+                  <div>{commission.commissionRate}% total</div>
+                  <div>Agente neto: {formatMoney(commission.agentCommissionAmount)}</div>
+                  <div>Retencion pagina: {formatMoney(commission.ownerCommissionAmount)}</div>
                 </td>
                 <td data-label="Estado">{commission.status}</td>
                 <td data-label="Pago">
@@ -591,6 +807,14 @@ export const AdminCommissionsPage = () => {
         setFormData={setFormData}
         onClose={resetCommissionModal}
         onSubmit={handleSubmit}
+        canCreate={canCreate}
+      />
+      <CommissionSettingsModal
+        isOpen={isSettingsModalOpen}
+        formData={settingsForm}
+        setFormData={setSettingsForm}
+        onClose={closeSettingsModal}
+        onSubmit={handleSettingsSubmit}
         canCreate={canCreate}
       />
     </div>
