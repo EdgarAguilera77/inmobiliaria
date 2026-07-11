@@ -27,6 +27,7 @@ const ensureAgentPhotoSchema = require('./utils/ensureAgentPhotoSchema');
 const ensureCommissionSplitSchema = require('./utils/ensureCommissionSplitSchema');
 const { ensureCommissionSettingsSchema } = require('./utils/ensureCommissionSettingsSchema');
 const ensurePropertyPublicationManualSchema = require('./utils/ensurePropertyPublicationManualSchema');
+const ensurePropertyDetailsSchema = require('./utils/ensurePropertyDetailsSchema');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -81,6 +82,7 @@ const startServer = async () => {
     await ensureCommissionSplitSchema();
     await ensureCommissionSettingsSchema();
     await ensurePropertyPublicationManualSchema();
+    await ensurePropertyDetailsSchema();
     server = app.listen(PORT, () => {
       console.log(`Servidor corriendo en el puerto ${PORT}`);
     });

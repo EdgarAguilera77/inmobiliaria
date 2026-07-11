@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS propiedades (
   AREA_M2 DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   DIRECCION VARCHAR(255) NOT NULL,
   DESCRIPCION TEXT NOT NULL,
+  DETALLES_JSON LONGTEXT NULL,
   IMAGEN_PORTADA LONGTEXT NULL,
   DESTACADA TINYINT(1) NOT NULL DEFAULT 0,
   ACTIVA TINYINT(1) NOT NULL DEFAULT 1,
@@ -170,6 +171,22 @@ SET @sql_estado_publicacion_manual := IF(
 PREPARE stmt_estado_publicacion_manual FROM @sql_estado_publicacion_manual;
 EXECUTE stmt_estado_publicacion_manual;
 DEALLOCATE PREPARE stmt_estado_publicacion_manual;
+
+SET @col_detalles_json := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'propiedades'
+    AND COLUMN_NAME = 'DETALLES_JSON'
+);
+SET @sql_detalles_json := IF(
+  @col_detalles_json = 0,
+  "ALTER TABLE propiedades ADD COLUMN DETALLES_JSON LONGTEXT NULL AFTER DESCRIPCION",
+  'SELECT 1'
+);
+PREPARE stmt_detalles_json FROM @sql_detalles_json;
+EXECUTE stmt_detalles_json;
+DEALLOCATE PREPARE stmt_detalles_json;
 
 ALTER TABLE propiedad_imagenes
   MODIFY COLUMN URL_IMAGEN LONGTEXT NOT NULL;

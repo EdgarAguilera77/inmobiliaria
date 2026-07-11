@@ -4,6 +4,12 @@ import { useRealEstate } from '../../contexts/RealEstateContext';
 import { AuthContext } from './AuthContext';
 import { API_BASE } from '../../constants/api';
 import AdminPagination from '../common/AdminPagination';
+import {
+  createEmptyPropertyDetails,
+  inferPropertyCategory,
+  normalizePropertyDetails,
+  PROPERTY_CATEGORY,
+} from '../../constants/propertyCategories';
 
 const emptyProperty = {
   title: '',
@@ -21,6 +27,7 @@ const emptyProperty = {
   featured: false,
   active: true,
   images: [''],
+  details: createEmptyPropertyDetails(),
 };
 
 const emptyAgent = {
@@ -316,9 +323,17 @@ const PropertyFormModal = ({
     return null;
   }
 
+  const selectedType = propertyTypes.find((type) => String(type.id) === String(formData.typeId));
+  const propertyCategory = inferPropertyCategory(selectedType);
   const displayCoverImageValue = formData.coverImage?.startsWith('data:image/')
     ? ''
     : formData.coverImage;
+  const addressLabel =
+    propertyCategory === PROPERTY_CATEGORY.SERVICIO
+      ? 'Cobertura o ubicacion'
+      : propertyCategory === PROPERTY_CATEGORY.VEHICULO
+        ? 'Ubicacion'
+        : 'Direccion';
 
   return (
     <div className="admin-modal-backdrop" onClick={onClose}>
@@ -337,22 +352,31 @@ const PropertyFormModal = ({
           <input
             value={formData.title}
             onChange={(event) => setFormData({ ...formData, title: event.target.value })}
-            placeholder="Titulo de la propiedad"
+            placeholder="Titulo de la publicacion"
             required
             disabled={!canCreate}
           />
           <div className="admin-form-row">
             <select
-              value={formData.operation}
-              onChange={(event) => setFormData({ ...formData, operation: event.target.value })}
-              disabled={!canCreate}
-            >
-              <option value="Venta">Venta</option>
-              <option value="Renta">Renta</option>
-            </select>
-            <select
               value={formData.typeId}
-              onChange={(event) => setFormData({ ...formData, typeId: event.target.value })}
+              onChange={(event) => {
+                const nextTypeId = event.target.value;
+                const nextType = propertyTypes.find((type) => String(type.id) === String(nextTypeId));
+                const nextCategory = inferPropertyCategory(nextType);
+                setFormData((current) => ({
+                  ...current,
+                  typeId: nextTypeId,
+                  operation: nextCategory === PROPERTY_CATEGORY.INMUEBLE ? current.operation || 'Venta' : 'Venta',
+                  bedrooms: nextCategory === PROPERTY_CATEGORY.INMUEBLE ? current.bedrooms : '',
+                  bathrooms: nextCategory === PROPERTY_CATEGORY.INMUEBLE ? current.bathrooms : '',
+                  parking: nextCategory === PROPERTY_CATEGORY.INMUEBLE ? current.parking : '',
+                  area: nextCategory === PROPERTY_CATEGORY.INMUEBLE ? current.area : '',
+                  details:
+                    nextCategory === PROPERTY_CATEGORY.INMUEBLE
+                      ? createEmptyPropertyDetails()
+                      : normalizePropertyDetails(current.details),
+                }));
+              }}
               required
               disabled={!canCreate}
             >
@@ -363,6 +387,16 @@ const PropertyFormModal = ({
                 </option>
               ))}
             </select>
+            {propertyCategory === PROPERTY_CATEGORY.INMUEBLE && (
+              <select
+                value={formData.operation}
+                onChange={(event) => setFormData({ ...formData, operation: event.target.value })}
+                disabled={!canCreate}
+              >
+                <option value="Venta">Venta</option>
+                <option value="Renta">Renta</option>
+              </select>
+            )}
             <select
               value={formData.zoneId}
               onChange={(event) => setFormData({ ...formData, zoneId: event.target.value })}
@@ -394,42 +428,137 @@ const PropertyFormModal = ({
             <input
               value={formData.price}
               onChange={(event) => setFormData({ ...formData, price: event.target.value })}
-              placeholder="Precio"
+              placeholder={propertyCategory === PROPERTY_CATEGORY.SERVICIO ? 'Tarifa' : 'Precio'}
               required
               disabled={!canCreate}
             />
-            <input
-              value={formData.area}
-              onChange={(event) => setFormData({ ...formData, area: event.target.value })}
-              placeholder="Area m2"
-              required
-              disabled={!canCreate}
-            />
+            {propertyCategory === PROPERTY_CATEGORY.INMUEBLE && (
+              <input
+                value={formData.area}
+                onChange={(event) => setFormData({ ...formData, area: event.target.value })}
+                placeholder="Area m2"
+                required
+                disabled={!canCreate}
+              />
+            )}
           </div>
-          <div className="admin-form-row">
-            <input
-              value={formData.bedrooms}
-              onChange={(event) => setFormData({ ...formData, bedrooms: event.target.value })}
-              placeholder="Habitaciones"
-              disabled={!canCreate}
-            />
-            <input
-              value={formData.bathrooms}
-              onChange={(event) => setFormData({ ...formData, bathrooms: event.target.value })}
-              placeholder="Banos"
-              disabled={!canCreate}
-            />
-            <input
-              value={formData.parking}
-              onChange={(event) => setFormData({ ...formData, parking: event.target.value })}
-              placeholder="Estacionamientos"
-              disabled={!canCreate}
-            />
-          </div>
+          {propertyCategory === PROPERTY_CATEGORY.INMUEBLE && (
+            <div className="admin-form-row">
+              <input
+                value={formData.bedrooms}
+                onChange={(event) => setFormData({ ...formData, bedrooms: event.target.value })}
+                placeholder="Habitaciones"
+                disabled={!canCreate}
+              />
+              <input
+                value={formData.bathrooms}
+                onChange={(event) => setFormData({ ...formData, bathrooms: event.target.value })}
+                placeholder="Banos"
+                disabled={!canCreate}
+              />
+              <input
+                value={formData.parking}
+                onChange={(event) => setFormData({ ...formData, parking: event.target.value })}
+                placeholder="Estacionamientos"
+                disabled={!canCreate}
+              />
+            </div>
+          )}
+          {propertyCategory === PROPERTY_CATEGORY.VEHICULO && (
+            <>
+              <div className="admin-form-row">
+                <input
+                  value={formData.details.brand}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, brand: event.target.value },
+                    })
+                  }
+                  placeholder="Marca"
+                  disabled={!canCreate}
+                />
+                <input
+                  value={formData.details.model}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, model: event.target.value },
+                    })
+                  }
+                  placeholder="Modelo"
+                  disabled={!canCreate}
+                />
+              </div>
+              <div className="admin-form-row">
+                <input
+                  value={formData.details.year}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, year: event.target.value },
+                    })
+                  }
+                  placeholder="Ano"
+                  disabled={!canCreate}
+                />
+                <input
+                  value={formData.details.mileage}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, mileage: event.target.value },
+                    })
+                  }
+                  placeholder="Kilometraje"
+                  disabled={!canCreate}
+                />
+              </div>
+            </>
+          )}
+          {propertyCategory === PROPERTY_CATEGORY.SERVICIO && (
+            <>
+              <div className="admin-form-row">
+                <input
+                  value={formData.details.modality}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, modality: event.target.value },
+                    })
+                  }
+                  placeholder="Modalidad"
+                  disabled={!canCreate}
+                />
+                <input
+                  value={formData.details.coverage}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      details: { ...formData.details, coverage: event.target.value },
+                    })
+                  }
+                  placeholder="Cobertura"
+                  disabled={!canCreate}
+                />
+              </div>
+              <input
+                value={formData.details.schedule}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    details: { ...formData.details, schedule: event.target.value },
+                  })
+                }
+                placeholder="Horario"
+                disabled={!canCreate}
+              />
+            </>
+          )}
           <input
             value={formData.address}
             onChange={(event) => setFormData({ ...formData, address: event.target.value })}
-            placeholder="Direccion"
+            placeholder={addressLabel}
             required
             disabled={!canCreate}
           />
@@ -1008,6 +1137,7 @@ export const AdminPropertiesPage = () => {
       parking: String(property.parking),
       area: String(property.area),
       images: property.images.length ? property.images : [''],
+      details: normalizePropertyDetails(property.details),
     });
     setIsPropertyModalOpen(true);
   };

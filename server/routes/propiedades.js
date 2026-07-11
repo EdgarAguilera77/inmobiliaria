@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const slugify = require('../utils/slugify');
+const { inferPropertyCategory } = require('../utils/propertyCategories');
 const {
   recalculatePropertyPublicationState,
   syncPublicationStateForAllProperties,
@@ -10,7 +11,7 @@ const {
 const basePropertySelect = `
   SELECT p.ID_PROPIEDAD, p.ID_TIPO_PROPIEDAD, p.ID_ZONA, p.ID_AGENTE, p.TITULO, p.SLUG, p.OPERACION,
          p.PRECIO, p.HABITACIONES, p.BANOS, p.ESTACIONAMIENTOS, p.AREA_M2, p.DIRECCION,
-         p.DESCRIPCION, p.IMAGEN_PORTADA, p.DESTACADA, p.ACTIVA, p.ESTADO_COMERCIAL, p.ESTADO_PUBLICACION, p.ESTADO_PUBLICACION_MANUAL, p.FECHA_PUBLICACION,
+         p.DESCRIPCION, p.DETALLES_JSON, p.IMAGEN_PORTADA, p.DESTACADA, p.ACTIVA, p.ESTADO_COMERCIAL, p.ESTADO_PUBLICACION, p.ESTADO_PUBLICACION_MANUAL, p.FECHA_PUBLICACION,
          p.FECHA_CREACION, p.FECHA_ACTUALIZACION,
          tp.NOMBRE AS TIPO_NOMBRE, tp.SLUG AS TIPO_SLUG,
          z.NOMBRE AS ZONA_NOMBRE, z.CIUDAD AS ZONA_CIUDAD, z.SLUG AS ZONA_SLUG,
@@ -21,6 +22,19 @@ const basePropertySelect = `
   INNER JOIN zonas z ON z.ID_ZONA = p.ID_ZONA
   INNER JOIN agentes a ON a.ID_AGENTE = p.ID_AGENTE
 `;
+
+const parsePropertyDetails = (rawValue) => {
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsedValue = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+    return parsedValue && typeof parsedValue === 'object' ? parsedValue : {};
+  } catch (error) {
+    return {};
+  }
+};
 
 const buildUniquePropertySlug = async (title, excludeId = null) => {
   const baseSlug = slugify(title) || 'propiedad';
@@ -47,48 +61,55 @@ const buildUniquePropertySlug = async (title, excludeId = null) => {
   }
 };
 
-const mapProperty = (row, images = []) => ({
-  ID_PROPIEDAD: row.ID_PROPIEDAD,
-  ID_TIPO_PROPIEDAD: row.ID_TIPO_PROPIEDAD,
-  ID_ZONA: row.ID_ZONA,
-  ID_AGENTE: row.ID_AGENTE,
-  TITULO: row.TITULO,
-  SLUG: row.SLUG,
-  OPERACION: row.OPERACION,
-  PRECIO: row.PRECIO,
-  HABITACIONES: row.HABITACIONES,
-  BANOS: row.BANOS,
-  ESTACIONAMIENTOS: row.ESTACIONAMIENTOS,
-  AREA_M2: row.AREA_M2,
-  DIRECCION: row.DIRECCION,
-  DESCRIPCION: row.DESCRIPCION,
-  IMAGEN_PORTADA: row.IMAGEN_PORTADA,
-  DESTACADA: row.DESTACADA,
-  ACTIVA: row.ACTIVA,
-  ESTADO_COMERCIAL: row.ESTADO_COMERCIAL,
-  ESTADO_PUBLICACION: row.ESTADO_PUBLICACION,
-  ESTADO_PUBLICACION_MANUAL: row.ESTADO_PUBLICACION_MANUAL,
-  FECHA_PUBLICACION: row.FECHA_PUBLICACION,
-  FECHA_CREACION: row.FECHA_CREACION,
-  FECHA_ACTUALIZACION: row.FECHA_ACTUALIZACION,
-  TIPO: {
+const mapProperty = (row, images = []) => {
+  const propertyType = {
     NOMBRE: row.TIPO_NOMBRE,
     SLUG: row.TIPO_SLUG,
-  },
-  ZONA: {
-    NOMBRE: row.ZONA_NOMBRE,
-    CIUDAD: row.ZONA_CIUDAD,
-    SLUG: row.ZONA_SLUG,
-  },
-  AGENTE: {
-    NOMBRE: row.AGENTE_NOMBRE,
-    CORREO: row.AGENTE_CORREO,
-    TELEFONO: row.AGENTE_TELEFONO,
-    FOTO_URL: row.AGENTE_FOTO_URL,
-    CARGO: row.AGENTE_CARGO,
-  },
-  IMAGENES: images,
-});
+  };
+  const details = parsePropertyDetails(row.DETALLES_JSON);
+
+  return {
+    ID_PROPIEDAD: row.ID_PROPIEDAD,
+    ID_TIPO_PROPIEDAD: row.ID_TIPO_PROPIEDAD,
+    ID_ZONA: row.ID_ZONA,
+    ID_AGENTE: row.ID_AGENTE,
+    TITULO: row.TITULO,
+    SLUG: row.SLUG,
+    OPERACION: row.OPERACION,
+    PRECIO: row.PRECIO,
+    HABITACIONES: row.HABITACIONES,
+    BANOS: row.BANOS,
+    ESTACIONAMIENTOS: row.ESTACIONAMIENTOS,
+    AREA_M2: row.AREA_M2,
+    DIRECCION: row.DIRECCION,
+    DESCRIPCION: row.DESCRIPCION,
+    DETALLES: details,
+    IMAGEN_PORTADA: row.IMAGEN_PORTADA,
+    DESTACADA: row.DESTACADA,
+    ACTIVA: row.ACTIVA,
+    ESTADO_COMERCIAL: row.ESTADO_COMERCIAL,
+    ESTADO_PUBLICACION: row.ESTADO_PUBLICACION,
+    ESTADO_PUBLICACION_MANUAL: row.ESTADO_PUBLICACION_MANUAL,
+    FECHA_PUBLICACION: row.FECHA_PUBLICACION,
+    FECHA_CREACION: row.FECHA_CREACION,
+    FECHA_ACTUALIZACION: row.FECHA_ACTUALIZACION,
+    CATEGORIA: inferPropertyCategory(propertyType),
+    TIPO: propertyType,
+    ZONA: {
+      NOMBRE: row.ZONA_NOMBRE,
+      CIUDAD: row.ZONA_CIUDAD,
+      SLUG: row.ZONA_SLUG,
+    },
+    AGENTE: {
+      NOMBRE: row.AGENTE_NOMBRE,
+      CORREO: row.AGENTE_CORREO,
+      TELEFONO: row.AGENTE_TELEFONO,
+      FOTO_URL: row.AGENTE_FOTO_URL,
+      CARGO: row.AGENTE_CARGO,
+    },
+    IMAGENES: images,
+  };
+};
 
 const getPropertyImages = async (propertyId) => {
   const [images] = await db.query(
@@ -199,6 +220,7 @@ router.post('/', async (req, res) => {
     AREA_M2 = 0,
     DIRECCION,
     DESCRIPCION,
+    DETALLES_JSON = null,
     IMAGEN_PORTADA = null,
     DESTACADA = 0,
     ACTIVA = 1,
@@ -212,12 +234,16 @@ router.post('/', async (req, res) => {
 
   try {
     const slug = await buildUniquePropertySlug(TITULO);
+    const serializedDetails =
+      DETALLES_JSON && typeof DETALLES_JSON === 'object'
+        ? JSON.stringify(DETALLES_JSON)
+        : DETALLES_JSON;
     const [result] = await db.query(
       `INSERT INTO propiedades (
         ID_TIPO_PROPIEDAD, ID_ZONA, ID_AGENTE, TITULO, SLUG, OPERACION, PRECIO,
         HABITACIONES, BANOS, ESTACIONAMIENTOS, AREA_M2, DIRECCION, DESCRIPCION,
-        IMAGEN_PORTADA, DESTACADA, ACTIVA, ESTADO_COMERCIAL, ESTADO_PUBLICACION
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        DETALLES_JSON, IMAGEN_PORTADA, DESTACADA, ACTIVA, ESTADO_COMERCIAL, ESTADO_PUBLICACION
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         ID_TIPO_PROPIEDAD,
         ID_ZONA,
@@ -232,6 +258,7 @@ router.post('/', async (req, res) => {
         AREA_M2,
         DIRECCION.trim(),
         DESCRIPCION || '',
+        serializedDetails,
         IMAGEN_PORTADA,
         DESTACADA,
         ACTIVA,
@@ -261,6 +288,7 @@ router.put('/:id', async (req, res) => {
     AREA_M2 = 0,
     DIRECCION,
     DESCRIPCION,
+    DETALLES_JSON = null,
     IMAGEN_PORTADA = null,
     DESTACADA = 0,
     ACTIVA = 1,
@@ -274,11 +302,15 @@ router.put('/:id', async (req, res) => {
 
   try {
     const slug = await buildUniquePropertySlug(TITULO, req.params.id);
+    const serializedDetails =
+      DETALLES_JSON && typeof DETALLES_JSON === 'object'
+        ? JSON.stringify(DETALLES_JSON)
+        : DETALLES_JSON;
     const [result] = await db.query(
       `UPDATE propiedades
        SET ID_TIPO_PROPIEDAD = ?, ID_ZONA = ?, ID_AGENTE = ?, TITULO = ?, SLUG = ?, OPERACION = ?,
            PRECIO = ?, HABITACIONES = ?, BANOS = ?, ESTACIONAMIENTOS = ?, AREA_M2 = ?, DIRECCION = ?,
-           DESCRIPCION = ?, IMAGEN_PORTADA = ?, DESTACADA = ?, ACTIVA = ?, ESTADO_COMERCIAL = ?, ESTADO_PUBLICACION = ?
+           DESCRIPCION = ?, DETALLES_JSON = ?, IMAGEN_PORTADA = ?, DESTACADA = ?, ACTIVA = ?, ESTADO_COMERCIAL = ?, ESTADO_PUBLICACION = ?
        WHERE ID_PROPIEDAD = ?`,
       [
         ID_TIPO_PROPIEDAD,
@@ -294,6 +326,7 @@ router.put('/:id', async (req, res) => {
         AREA_M2,
         DIRECCION.trim(),
         DESCRIPCION || '',
+        serializedDetails,
         IMAGEN_PORTADA,
         DESTACADA,
         ACTIVA,

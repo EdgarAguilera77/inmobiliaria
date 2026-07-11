@@ -2,6 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { companyProfile } from '../constants/realEstateSeed';
 import { API_BASE } from '../constants/api';
+import {
+  createEmptyPropertyDetails,
+  inferPropertyCategory,
+  normalizePropertyDetails,
+} from '../constants/propertyCategories';
 const DEFAULT_COMMISSION_RATE = 5;
 const DEFAULT_PLATFORM_FEE_RATE = 5;
 const parsePercentOrFallback = (value, fallback) => {
@@ -21,6 +26,11 @@ const mapType = (type) => ({
   slug: type.SLUG,
   description: type.DESCRIPCION || '',
   active: Number(type.ESTADO) === 1,
+  category: inferPropertyCategory({
+    name: type.NOMBRE,
+    slug: type.SLUG,
+    category: type.CATEGORIA,
+  }),
 });
 
 const mapZone = (zone) => ({
@@ -44,51 +54,64 @@ const mapAgent = (agent) => ({
   status: agent.ESTADO,
 });
 
-const mapProperty = (property) => ({
-  id: property.ID_PROPIEDAD,
-  typeId: property.ID_TIPO_PROPIEDAD,
-  zoneId: property.ID_ZONA,
-  agentId: property.ID_AGENTE,
-  title: property.TITULO,
-  slug: property.SLUG,
-  operation: property.OPERACION,
-  price: Number(property.PRECIO || 0),
-  bedrooms: Number(property.HABITACIONES || 0),
-  bathrooms: Number(property.BANOS || 0),
-  parking: Number(property.ESTACIONAMIENTOS || 0),
-  area: Number(property.AREA_M2 || 0),
-  address: property.DIRECCION,
-  description: property.DESCRIPCION,
-  coverImage: property.IMAGEN_PORTADA,
-  featured: Number(property.DESTACADA) === 1,
-  active: Number(property.ACTIVA) === 1,
-  commercialStatus: property.ESTADO_COMERCIAL || (Number(property.ACTIVA) === 1 ? 'Disponible' : 'Inactiva'),
-  publicationStatus: property.ESTADO_PUBLICACION || 'Borrador',
-  manualPublicationStatus: property.ESTADO_PUBLICACION_MANUAL || null,
-  type: property.TIPO
+const mapProperty = (property) => {
+  const type = property.TIPO
     ? {
         name: property.TIPO.NOMBRE,
         slug: property.TIPO.SLUG,
+        category: inferPropertyCategory(property.TIPO),
       }
-    : null,
-  zone: property.ZONA
-    ? {
-        name: property.ZONA.NOMBRE,
-        city: property.ZONA.CIUDAD,
-        slug: property.ZONA.SLUG,
-      }
-    : null,
-  agent: property.AGENTE
-    ? {
-        name: property.AGENTE.NOMBRE,
-        email: property.AGENTE.CORREO,
-        phone: property.AGENTE.TELEFONO,
-        photo: property.AGENTE.FOTO_URL,
-        role: property.AGENTE.CARGO,
-      }
-    : null,
-  images: (property.IMAGENES || []).map((image) => image.URL_IMAGEN),
-});
+    : null;
+
+  return {
+    id: property.ID_PROPIEDAD,
+    typeId: property.ID_TIPO_PROPIEDAD,
+    zoneId: property.ID_ZONA,
+    agentId: property.ID_AGENTE,
+    title: property.TITULO,
+    slug: property.SLUG,
+    operation: property.OPERACION,
+    price: Number(property.PRECIO || 0),
+    bedrooms: Number(property.HABITACIONES || 0),
+    bathrooms: Number(property.BANOS || 0),
+    parking: Number(property.ESTACIONAMIENTOS || 0),
+    area: Number(property.AREA_M2 || 0),
+    address: property.DIRECCION,
+    description: property.DESCRIPCION,
+    details: normalizePropertyDetails(property.DETALLES || createEmptyPropertyDetails()),
+    category:
+      property.CATEGORIA ||
+      inferPropertyCategory({
+        name: property.TIPO?.NOMBRE,
+        slug: property.TIPO?.SLUG,
+      }),
+    coverImage: property.IMAGEN_PORTADA,
+    featured: Number(property.DESTACADA) === 1,
+    active: Number(property.ACTIVA) === 1,
+    commercialStatus:
+      property.ESTADO_COMERCIAL || (Number(property.ACTIVA) === 1 ? 'Disponible' : 'Inactiva'),
+    publicationStatus: property.ESTADO_PUBLICACION || 'Borrador',
+    manualPublicationStatus: property.ESTADO_PUBLICACION_MANUAL || null,
+    type,
+    zone: property.ZONA
+      ? {
+          name: property.ZONA.NOMBRE,
+          city: property.ZONA.CIUDAD,
+          slug: property.ZONA.SLUG,
+        }
+      : null,
+    agent: property.AGENTE
+      ? {
+          name: property.AGENTE.NOMBRE,
+          email: property.AGENTE.CORREO,
+          phone: property.AGENTE.TELEFONO,
+          photo: property.AGENTE.FOTO_URL,
+          role: property.AGENTE.CARGO,
+        }
+      : null,
+    images: (property.IMAGENES || []).map((image) => image.URL_IMAGEN),
+  };
+};
 
 const mapContact = (contact) => ({
   id: contact.ID_SOLICITUD,
@@ -378,7 +401,7 @@ export const RealEstateProvider = ({ children }) => {
       ID_ZONA: Number(property.zoneId),
       ID_AGENTE: Number(property.agentId),
       TITULO: property.title,
-      OPERACION: property.operation,
+      OPERACION: property.operation || 'Venta',
       PRECIO: Number(property.price) || 0,
       HABITACIONES: Number(property.bedrooms) || 0,
       BANOS: Number(property.bathrooms) || 0,
@@ -386,6 +409,7 @@ export const RealEstateProvider = ({ children }) => {
       AREA_M2: Number(property.area) || 0,
       DIRECCION: property.address,
       DESCRIPCION: property.description || '',
+      DETALLES_JSON: normalizePropertyDetails(property.details || createEmptyPropertyDetails()),
       IMAGEN_PORTADA: property.coverImage,
       DESTACADA: property.featured ? 1 : 0,
       ACTIVA: property.active ? 1 : 0,

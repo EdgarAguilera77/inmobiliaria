@@ -19,6 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useRealEstate } from '../../contexts/RealEstateContext';
 import jmLogo from '../../assets/JM.jpeg';
+import { PROPERTY_CATEGORY } from '../../constants/propertyCategories';
 
 const currencyFormatter = new Intl.NumberFormat('es-HN', {
   style: 'currency',
@@ -72,6 +73,9 @@ const ImageLightbox = ({ images, initialIndex = 0, title, onClose }) => {
 const PropertyCard = ({ property }) => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const galleryImages = property.images?.length ? property.images : [property.coverImage];
+  const isPropertyCategory = property.category === PROPERTY_CATEGORY.INMUEBLE;
+  const isVehicleCategory = property.category === PROPERTY_CATEGORY.VEHICULO;
+  const isServiceCategory = property.category === PROPERTY_CATEGORY.SERVICIO;
 
   return (
     <>
@@ -91,7 +95,7 @@ const PropertyCard = ({ property }) => {
         </button>
         <div className="property-card-body">
           <div className="property-card-meta">
-            <span>{property.operation}</span>
+            <span>{isServiceCategory ? 'Servicio' : property.operation}</span>
             <span>{property.type?.name}</span>
           </div>
           <h3>{property.title}</h3>
@@ -100,22 +104,41 @@ const PropertyCard = ({ property }) => {
             {property.zone?.name}, {property.zone?.city}
           </p>
           <div className="property-card-specs">
-            <span>
-              <FontAwesomeIcon icon={faBed} />
-              {property.bedrooms || '--'}
-            </span>
-            <span>
-              <FontAwesomeIcon icon={faBath} />
-              {property.bathrooms || '--'}
-            </span>
-            <span>
-              <FontAwesomeIcon icon={faCar} />
-              {property.parking || '--'}
-            </span>
-            <span>
-              <FontAwesomeIcon icon={faRulerCombined} />
-              {property.area} m2
-            </span>
+            {isPropertyCategory && (
+              <>
+                <span>
+                  <FontAwesomeIcon icon={faBed} />
+                  {property.bedrooms || '--'}
+                </span>
+                <span>
+                  <FontAwesomeIcon icon={faBath} />
+                  {property.bathrooms || '--'}
+                </span>
+                <span>
+                  <FontAwesomeIcon icon={faCar} />
+                  {property.parking || '--'}
+                </span>
+                <span>
+                  <FontAwesomeIcon icon={faRulerCombined} />
+                  {property.area} m2
+                </span>
+              </>
+            )}
+            {isVehicleCategory && (
+              <>
+                <span>{property.details.brand || '--'}</span>
+                <span>{property.details.model || '--'}</span>
+                <span>{property.details.year || '--'}</span>
+                <span>{property.details.mileage || '--'} km</span>
+              </>
+            )}
+            {isServiceCategory && (
+              <>
+                <span>{property.details.modality || 'Modalidad flexible'}</span>
+                <span>{property.details.coverage || 'Cobertura general'}</span>
+                <span>{property.details.schedule || 'Horario a convenir'}</span>
+              </>
+            )}
           </div>
           <div className="property-card-footer">
             <strong>{formatPrice(property.price, property.operation)}</strong>
@@ -578,6 +601,9 @@ export const PropertyDetailPage = () => {
   };
 
   const galleryImages = property.images?.length ? property.images : [property.coverImage];
+  const isPropertyCategory = property.category === PROPERTY_CATEGORY.INMUEBLE;
+  const isVehicleCategory = property.category === PROPERTY_CATEGORY.VEHICULO;
+  const isServiceCategory = property.category === PROPERTY_CATEGORY.SERVICIO;
 
   return (
     <>
@@ -604,19 +630,36 @@ export const PropertyDetailPage = () => {
           </div>
         </div>
         <div className="property-detail-panel">
-          <span className="section-chip">{property.operation}</span>
+          <span className="section-chip">{isServiceCategory ? 'Servicio' : property.operation}</span>
           <h1>{property.title}</h1>
           <p className="property-card-location">
             <FontAwesomeIcon icon={faLocationDot} />
             {property.address}
           </p>
           <strong className="detail-price">{formatPrice(property.price, property.operation)}</strong>
-          <div className="detail-stats">
-            <span>{property.bedrooms} habitaciones</span>
-            <span>{property.bathrooms} banos</span>
-            <span>{property.parking} estacionamientos</span>
-            <span>{property.area} m2</span>
-          </div>
+          {isPropertyCategory && (
+            <div className="detail-stats">
+              <span>{property.bedrooms} habitaciones</span>
+              <span>{property.bathrooms} banos</span>
+              <span>{property.parking} estacionamientos</span>
+              <span>{property.area} m2</span>
+            </div>
+          )}
+          {isVehicleCategory && (
+            <div className="detail-stats">
+              <span>{property.details.brand || 'Marca no especificada'}</span>
+              <span>{property.details.model || 'Modelo no especificado'}</span>
+              <span>{property.details.year || 'Ano no especificado'}</span>
+              <span>{property.details.mileage || 'Kilometraje no especificado'} km</span>
+            </div>
+          )}
+          {isServiceCategory && (
+            <div className="detail-stats">
+              <span>{property.details.modality || 'Modalidad flexible'}</span>
+              <span>{property.details.coverage || 'Cobertura general'}</span>
+              <span>{property.details.schedule || 'Horario a convenir'}</span>
+            </div>
+          )}
           <p>{property.description}</p>
           {displayAgent && (
             <div className="agent-box">

@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manual de Comisiones - Global Consultores Inmobiliarios</title>
+    <style>
+      :root {
+        --primary: #1f4f46;
+        --primary-dark: #173a34;
+        --accent: #d7a24a;
+        --ink: #1d2421;
+        --muted: #5d6d67;
+        --panel: #ffffff;
+        --line: #d8d5cf;
+        --soft: #edf2ef;
+        --warm: #faf7f0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #fbfaf7 0%, #f2ece1 100%);
+        line-height: 1.65;
+      }
+
+      .document-shell {
+        width: min(1100px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 32px 0 72px;
+      }
+
+      .page {
+        background: var(--panel);
+        border: 1px solid rgba(31, 79, 70, 0.08);
+        border-radius: 28px;
+        box-shadow: 0 30px 60px rgba(24, 34, 31, 0.08);
+        padding: 48px;
+        margin-bottom: 28px;
+      }
+
+      .cover {
+        min-height: calc(100vh - 100px);
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 36px;
+        align-items: stretch;
+      }
+
+      .cover-main {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(31, 79, 70, 0.08);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin: 20px 0 24px;
+      }
+
+      .brand-logo {
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        object-fit: cover;
+        border: 1px solid rgba(31, 79, 70, 0.08);
+        box-shadow: 0 12px 24px rgba(26, 36, 33, 0.08);
+      }
+
+      .brand-copy h1 {
+        margin: 0;
+        font-size: 42px;
+        line-height: 1;
+        color: var(--primary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-copy p {
+        margin: 10px 0 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .cover h2 {
+        margin: 12px 0 16px;
+        font-size: 44px;
+        line-height: 1.05;
+        color: var(--ink);
+      }
+
+      .lead {
+        font-size: 18px;
+        color: var(--muted);
+        max-width: 56ch;
+      }
+
+      .cover-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .metric {
+        padding: 18px;
+        border-radius: 22px;
+        background: var(--soft);
+        border: 1px solid rgba(31, 79, 70, 0.08);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 15px;
+        color: var(--primary);
+        margin-bottom: 6px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .cover-side {
+        border-radius: 28px;
+        background:
+          linear-gradient(180deg, rgba(31, 79, 70, 0.94), rgba(23, 58, 52, 0.98)),
+          var(--primary);
+        color: #fff;
+        padding: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cover-side::before,
+      .cover-side::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .cover-side::before {
+        width: 240px;
+        height: 240px;
+        top: -60px;
+        right: -90px;
+      }
+
+      .cover-side::after {
+        width: 180px;
+        height: 180px;
+        bottom: -40px;
+        left: -60px;
+      }
+
+      .cover-side h3,
+      .cover-side ul,
+      .meta-box {
+        position: relative;
+        z-index: 1;
+      }
+
+      .cover-side h3 {
+        margin: 0 0 16px;
+        font-size: 24px;
+      }
+
+      .cover-side ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .cover-side li {
+        margin-bottom: 10px;
+      }
+
+      .meta-box {
+        margin-top: 28px;
+        padding: 18px 20px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .meta-box p {
+        margin: 6px 0;
+      }
+
+      h2.section-title {
+        margin: 0 0 12px;
+        font-size: 30px;
+        color: var(--primary);
+      }
+
+      h3 {
+        margin: 24px 0 10px;
+        font-size: 22px;
+        color: var(--ink);
+      }
+
+      h4 {
+        margin: 18px 0 8px;
+        font-size: 18px;
+        color: var(--primary-dark);
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      .toc {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 36px;
+      }
+
+      .toc-group {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: #fffdfa;
+      }
+
+      .toc-group h3 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      .toc-group a {
+        display: block;
+        color: var(--ink);
+        text-decoration: none;
+        padding: 6px 0;
+      }
+
+      .two-column {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+      }
+
+      .steps,
+      .plain-list {
+        padding-left: 22px;
+        margin: 0 0 14px;
+      }
+
+      .steps li,
+      .plain-list li {
+        margin-bottom: 8px;
+      }
+
+      .info-box,
+      .warning-box {
+        border-radius: 22px;
+        padding: 20px 22px;
+        margin: 18px 0 22px;
+      }
+
+      .info-box {
+        background: rgba(31, 79, 70, 0.06);
+        border: 1px solid rgba(31, 79, 70, 0.12);
+      }
+
+      .warning-box {
+        background: rgba(215, 162, 74, 0.12);
+        border: 1px solid rgba(215, 162, 74, 0.24);
+      }
+
+      .formula-card {
+        display: grid;
+        gap: 14px;
+        margin: 20px 0 24px;
+      }
+
+      .formula-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: var(--soft);
+        border: 1px solid rgba(31, 79, 70, 0.08);
+      }
+
+      .formula-row strong {
+        color: var(--primary);
+      }
+
+      .capture-frame {
+        margin: 18px 0 24px;
+        padding: 18px;
+        border-radius: 24px;
+        background: linear-gradient(180deg, #faf8f4, #f3eee6);
+        border: 1px solid rgba(31, 79, 70, 0.1);
+      }
+
+      .capture-frame img {
+        width: 100%;
+        display: block;
+        border-radius: 18px;
+        border: 1px solid rgba(31, 79, 70, 0.08);
+      }
+
+      .capture-frame strong {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--primary);
+        font-size: 15px;
+      }
+
+      .capture-frame span {
+        display: block;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .capture-placeholder {
+        min-height: 240px;
+        border: 2px dashed rgba(31, 79, 70, 0.25);
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 24px;
+        background: rgba(255, 255, 255, 0.65);
+        color: var(--muted);
+      }
+
+      .footer-note {
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .document-shell {
+          width: 100%;
+          padding: 0;
+        }
+
+        .page {
+          box-shadow: none;
+          border: none;
+          border-radius: 0;
+          margin: 0;
+          min-height: 100vh;
+          page-break-after: always;
+        }
+
+        .page:last-child {
+          page-break-after: auto;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .document-shell {
+          width: min(100%, calc(100% - 24px));
+          padding: 12px 0 40px;
+        }
+
+        .page {
+          padding: 28px 22px;
+          border-radius: 22px;
+        }
+
+        .cover,
+        .toc,
+        .two-column {
+          grid-template-columns: 1fr;
+        }
+
+        .cover h2 {
+          font-size: 34px;
+        }
+
+        .formula-row {
+          flex-direction: column;
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="document-shell">
+      <section class="page cover">
+        <div class="cover-main">
+          <div>
+            <span class="eyebrow">Manual institucional</span>
+            <div class="brand-row">
+              <img
+                src="manual-assets/01-login.png"
+                alt="Global Consultores Inmobiliarios"
+                class="brand-logo"
+              />
+              <div class="brand-copy">
+                <h1>Global</h1>
+                <p>Consultores inmobiliarios y servicios integrales</p>
+              </div>
+            </div>
+            <h2>Manual operativo del modulo de comisiones</h2>
+            <p class="lead">
+              Documento breve para explicar al cliente el flujo de ventas,
+              la generacion de comisiones, la retencion de la pagina y el control
+              administrativo de pagos dentro del sistema inmobiliario.
+            </p>
+            <div class="cover-grid">
+              <div class="metric">
+                <strong>Alcance</strong>
+                <span>Ventas, comisiones, ajustes y estados de pago</span>
+              </div>
+              <div class="metric">
+                <strong>Perfil objetivo</strong>
+                <span>Gerencia, administracion comercial y cliente final</span>
+              </div>
+              <div class="metric">
+                <strong>Politica comercial</strong>
+                <span>Retencion de pagina configurable dentro de rango permitido</span>
+              </div>
+              <div class="metric">
+                <strong>Uso sugerido</strong>
+                <span>Capacitacion, induccion y consulta operativa</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-note">
+            Documento listo para impresion o exportacion a PDF.
+          </div>
+        </div>
+
+        <aside class="cover-side">
+          <h3>Contenido del documento</h3>
+          <ul>
+            <li>Concepto general de la comision.</li>
+            <li>Ejemplo practico de calculo.</li>
+            <li>Configuracion de parametros.</li>
+            <li>Registro de venta y generacion automatica.</li>
+            <li>Control y pago de comisiones.</li>
+          </ul>
+
+          <div class="meta-box">
+            <p><strong>Documento:</strong> Manual de comisiones</p>
+            <p><strong>Cliente:</strong> Global Consultores Inmobiliarios</p>
+            <p><strong>Fecha:</strong> Julio 2026</p>
+            <p><strong>Formato:</strong> Entrega institucional</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="page" id="indice">
+        <span class="eyebrow">Indice</span>
+        <h2 class="section-title">Tabla de contenido</h2>
+        <div class="toc">
+          <div class="toc-group">
+            <h3>Parte 1. Conceptos</h3>
+            <a href="#objetivo">1. Objetivo del modulo</a>
+            <a href="#calculo">2. Como se calcula una comision</a>
+            <a href="#ejemplo">3. Ejemplo practico</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 2. Configuracion</h3>
+            <a href="#configuracion">4. Parametros generales</a>
+            <a href="#rango">5. Rango permitido</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 3. Operacion</h3>
+            <a href="#flujo-venta">6. Como registrar una venta</a>
+            <a href="#interpretacion">7. Como leer el calculo</a>
+            <a href="#modulo-comisiones">8. Modulo de comisiones</a>
+          </div>
+          <div class="toc-group">
+            <h3>Parte 4. Control</h3>
+            <a href="#ajustes">9. Ajustar una comision</a>
+            <a href="#estados">10. Estados de pago</a>
+            <a href="#capturas">11. Capturas finales sugeridas</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="objetivo">
+        <span class="eyebrow">Parte 1</span>
+        <h2 class="section-title">1. Objetivo del modulo</h2>
+        <p>
+          El modulo de comisiones controla el resultado economico que se genera
+          cuando una propiedad es vendida o cerrada comercialmente dentro del sistema.
+        </p>
+        <p>Permite conocer con claridad:</p>
+        <ul class="plain-list">
+          <li>la comision bruta generada por la venta</li>
+          <li>la retencion correspondiente a la pagina o empresa</li>
+          <li>el monto neto que recibe el agente</li>
+          <li>el estado administrativo de pago de la comision</li>
+        </ul>
+
+        <div class="info-box">
+          <strong>Importante</strong>
+          <p>
+            El sistema separa el calculo comercial de la venta del control administrativo
+            de la comision, para que ambos puedan revisarse con claridad.
+          </p>
+        </div>
+
+        <h3 id="calculo">2. Como se calcula una comision</h3>
+        <p>El sistema trabaja en dos niveles:</p>
+        <ol class="steps">
+          <li>Calcula la comision bruta del agente sobre el precio de cierre.</li>
+          <li>Calcula la retencion de la pagina sobre esa comision bruta.</li>
+        </ol>
+
+        <h3 id="ejemplo">3. Ejemplo practico</h3>
+        <div class="formula-card">
+          <div class="formula-row">
+            <span>Precio de venta</span>
+            <strong>L 2,000,000</strong>
+          </div>
+          <div class="formula-row">
+            <span>Comision del agente</span>
+            <strong>5%</strong>
+          </div>
+          <div class="formula-row">
+            <span>Comision bruta del agente</span>
+            <strong>L 100,000</strong>
+          </div>
+          <div class="formula-row">
+            <span>Retencion de la pagina</span>
+            <strong>10%</strong>
+          </div>
+          <div class="formula-row">
+            <span>Monto para la pagina</span>
+            <strong>L 10,000</strong>
+          </div>
+          <div class="formula-row">
+            <span>Monto neto del agente</span>
+            <strong>L 90,000</strong>
+          </div>
+        </div>
+
+        <div class="warning-box">
+          <strong>Formula resumida</strong>
+          <p>
+            Comision bruta = precio de cierre x porcentaje de comision del agente.
+            Luego, la retencion de la pagina se calcula sobre esa comision bruta,
+            no directamente sobre el valor total del inmueble.
+          </p>
+        </div>
+      </section>
+
+      <section class="page" id="configuracion">
+        <span class="eyebrow">Parte 2</span>
+        <h2 class="section-title">4. Configuracion general de comisiones</h2>
+        <p>
+          El sistema dispone de una configuracion general para definir como se comporta
+          el calculo de comisiones por defecto.
+        </p>
+        <ul class="plain-list">
+          <li>comision minima permitida para la pagina</li>
+          <li>comision maxima permitida para la pagina</li>
+          <li>comision del agente por defecto</li>
+          <li>retencion de pagina por defecto</li>
+        </ul>
+
+        <div class="capture-frame">
+          <strong>Captura 1. Ruta inicial para gestionar ventas y comisiones</strong>
+          <img src="manual-assets/08-propiedades-admin.png" alt="Modulo de propiedades" />
+          <span>
+            Desde el modulo de propiedades se inicia el flujo de cierre de venta que luego
+            genera la comision correspondiente.
+          </span>
+        </div>
+
+        <h3 id="rango">5. Rango permitido</h3>
+        <p>
+          La retencion de la pagina debe permanecer dentro del rango configurado por la empresa.
+          Esto evita errores operativos y asegura que el usuario no registre comisiones fuera
+          de la politica comercial definida.
+        </p>
+
+        <div class="capture-frame">
+          <strong>Captura pendiente. Configuracion de parametros de comision</strong>
+          <div class="capture-placeholder">
+            Inserta aqui la captura del modal o pantalla
+            <br />
+            <strong>Comisiones > Configurar parametros</strong>
+          </div>
+          <span>
+            Esta imagen debe mostrar los campos de porcentaje minimo, porcentaje maximo,
+            comision por defecto y retencion de pagina por defecto.
+          </span>
+        </div>
+      </section>
+
+      <section class="page" id="flujo-venta">
+        <span class="eyebrow">Parte 3</span>
+        <h2 class="section-title">6. Como registrar una venta con comision</h2>
+        <ol class="steps">
+          <li>Ingresar al modulo <strong>Propiedades</strong>.</li>
+          <li>Buscar la propiedad disponible.</li>
+          <li>Presionar la accion <strong>Cerrar venta</strong>.</li>
+          <li>Completar los datos del cliente.</li>
+          <li>Confirmar el precio de cierre.</li>
+          <li>Verificar el porcentaje de comision del agente.</li>
+          <li>Definir la retencion de la pagina.</li>
+          <li>Guardar el cierre comercial.</li>
+        </ol>
+
+        <div class="two-column">
+          <div>
+            <h3>Resultado inmediato del cierre</h3>
+            <ul class="plain-list">
+              <li>la propiedad cambia de estado comercial</li>
+              <li>se registra la venta</li>
+              <li>se genera la comision automaticamente</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Datos que se deben validar</h3>
+            <ul class="plain-list">
+              <li>cliente</li>
+              <li>precio de cierre</li>
+              <li>porcentaje total de comision</li>
+              <li>porcentaje de retencion de pagina</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="capture-frame">
+          <strong>Captura pendiente. Modal de cierre de venta</strong>
+          <div class="capture-placeholder">
+            Inserta aqui la captura del modal
+            <br />
+            <strong>Cerrar venta</strong>
+          </div>
+          <span>
+            Debe mostrar los datos del cliente, precio de cierre, porcentaje de comision,
+            porcentaje de retencion y el resumen de calculo.
+          </span>
+        </div>
+
+        <h3 id="interpretacion">7. Como interpretar el calculo</h3>
+        <p>Dentro del cierre de venta se muestran estos datos:</p>
+        <ul class="plain-list">
+          <li><strong>Precio publicado:</strong> valor original del inmueble</li>
+          <li><strong>Precio de cierre:</strong> valor final negociado</li>
+          <li><strong>% comision:</strong> porcentaje total generado por el agente</li>
+          <li><strong>% pagina:</strong> porcentaje retenido por la empresa</li>
+          <li><strong>Comision bruta:</strong> valor total generado por la venta</li>
+          <li><strong>Retencion pagina:</strong> monto que recibe la empresa</li>
+          <li><strong>Agente neto:</strong> monto final que recibe el agente</li>
+        </ul>
+      </section>
+
+      <section class="page" id="modulo-comisiones">
+        <span class="eyebrow">Control comercial</span>
+        <h2 class="section-title">8. Modulo de comisiones</h2>
+        <p>
+          Una vez registrada la venta, el sistema crea automaticamente el registro de comision.
+          Desde el modulo de comisiones se puede revisar el comportamiento financiero de cada cierre.
+        </p>
+
+        <div class="capture-frame">
+          <strong>Captura pendiente. Listado principal del modulo de comisiones</strong>
+          <div class="capture-placeholder">
+            Inserta aqui la captura del listado de comisiones
+          </div>
+          <span>
+            La captura debe mostrar propiedad, agente, monto, estado y acciones.
+          </span>
+        </div>
+
+        <p>Desde esta pantalla el cliente puede consultar:</p>
+        <ul class="plain-list">
+          <li>propiedad asociada</li>
+          <li>agente responsable</li>
+          <li>monto bruto y neto</li>
+          <li>estado de la comision</li>
+          <li>informacion del pago</li>
+        </ul>
+      </section>
+
+      <section class="page" id="ajustes">
+        <span class="eyebrow">Parte 4</span>
+        <h2 class="section-title">9. Ajustar una comision ya registrada</h2>
+        <p>
+          Si la empresa necesita modificar la retencion de la pagina sobre una venta cerrada,
+          el sistema permite editar la comision respetando siempre el rango autorizado.
+        </p>
+
+        <ol class="steps">
+          <li>Ingresar al modulo <strong>Comisiones</strong>.</li>
+          <li>Seleccionar el registro correspondiente.</li>
+          <li>Presionar <strong>Editar</strong>.</li>
+          <li>Cambiar el porcentaje de la pagina dentro del rango permitido.</li>
+          <li>Guardar los cambios.</li>
+        </ol>
+
+        <div class="info-box">
+          <strong>Recalculo automatico</strong>
+          <p>
+            Al cambiar la retencion de la pagina, el sistema recalcula automaticamente el monto
+            para la empresa y el monto neto del agente, sin necesidad de hacer operaciones manuales.
+          </p>
+        </div>
+
+        <div class="capture-frame">
+          <strong>Captura pendiente. Modal de edicion de comision</strong>
+          <div class="capture-placeholder">
+            Inserta aqui la captura del modal de edicion de comision
+          </div>
+          <span>
+            La imagen ideal debe mostrar el porcentaje de la pagina editable y el recalculo de montos.
+          </span>
+        </div>
+
+        <h3 id="estados">10. Estados de pago</h3>
+        <p>El control administrativo de comisiones puede manejarse con estados como:</p>
+        <ul class="plain-list">
+          <li><strong>Pendiente</strong></li>
+          <li><strong>Pagada</strong></li>
+        </ul>
+
+        <p>Cuando una comision se marca como pagada, se recomienda registrar:</p>
+        <ul class="plain-list">
+          <li>fecha de pago</li>
+          <li>observaciones del pago</li>
+        </ul>
+      </section>
+
+      <section class="page" id="capturas">
+        <span class="eyebrow">Cierre</span>
+        <h2 class="section-title">11. Capturas finales sugeridas para cerrar la entrega</h2>
+        <p>
+          Esta version ya esta lista para cliente, pero para dejarla completamente cerrada
+          conviene incorporar las capturas especificas del modulo de comisiones.
+        </p>
+
+        <ol class="steps">
+          <li>Configuracion de parametros de comision.</li>
+          <li>Modal de cierre de venta.</li>
+          <li>Resumen de calculo de comision dentro de la venta.</li>
+          <li>Listado principal del modulo de comisiones.</li>
+          <li>Modal de edicion de comision.</li>
+          <li>Ejemplo de comision en estado pagada.</li>
+        </ol>
+
+        <div class="warning-box">
+          <strong>Nota final</strong>
+          <p>
+            Si me compartes esas capturas especificas del modulo de comisiones, esta misma plantilla
+            se puede dejar terminada y lista para exportar a PDF sin espacios pendientes.
+          </p>
+        </div>
+
+        <p class="footer-note">
+          Global Consultores Inmobiliarios y Servicios Integrales - Manual operativo del modulo de comisiones
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
