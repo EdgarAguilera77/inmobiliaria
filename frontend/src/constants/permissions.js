@@ -36,7 +36,7 @@ export const ADMIN_PERMISSION_KEYS = [
 
 export const OBJECT_LABELS = {
   Dashboard: 'Dashboard',
-  Propiedades: 'Propiedades',
+  Propiedades: 'Publicaciones',
   Agentes: 'Agentes',
   TiposPropiedad: 'Tipos',
   Zonas: 'Zonas',
@@ -60,7 +60,7 @@ export const ADMIN_MENU_ITEMS = [
     permission: 'Dashboard',
   },
   {
-    name: 'Propiedades',
+    name: 'Publicaciones',
     path: '/admin/propiedades',
     icon: faBuilding,
     permission: 'Propiedades',
@@ -149,7 +149,7 @@ export const ADMIN_MENU_GROUPS = [
   {
     key: 'operacion',
     name: 'Operacion comercial',
-    items: ['Propiedades', 'Ventas', 'Comisiones', 'Suscripciones', 'Pagos de publicacion', 'Solicitudes'],
+    items: ['Publicaciones', 'Ventas', 'Comisiones', 'Suscripciones', 'Pagos de publicacion', 'Solicitudes'],
   },
   {
     key: 'catalogos',

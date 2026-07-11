@@ -179,7 +179,7 @@ const PublicHeader = () => {
       </div>
       <nav className="public-nav">
         <NavLink to="/">Inicio</NavLink>
-        <NavLink to="/propiedades">Propiedades</NavLink>
+        <NavLink to="/propiedades">Publicaciones</NavLink>
         <NavLink to="/servicios">Servicios</NavLink>
         <NavLink to="/nosotros">Nosotros</NavLink>
         <NavLink to="/contacto">Contacto</NavLink>
@@ -278,7 +278,7 @@ export const HomePage = () => {
   };
 
   if (isLoading) {
-    return <section className="content-section"><h2>Cargando propiedades...</h2></section>;
+    return <section className="content-section"><h2>Cargando publicaciones...</h2></section>;
   }
 
   return (
@@ -286,14 +286,14 @@ export const HomePage = () => {
       <section className="hero-section">
         <div className="hero-copy">
           <span className="section-chip">Portal inmobiliario</span>
-          <h1>Encuentra propiedades con respaldo inmobiliario, legal y comercial en un solo lugar</h1>
+          <h1>Encuentra publicaciones con respaldo inmobiliario, legal y comercial en un solo lugar</h1>
           <p>
             Explora casas, apartamentos y terrenos con una experiencia clara, filtros utiles y
             acompanamiento profesional para compra, renta o inversion.
           </p>
           <div className="hero-actions">
             <Link to="/propiedades" className="primary-button">
-              Explorar propiedades
+              Explorar publicaciones
             </Link>
             <Link to="/contacto" className="secondary-button">
               Hablar con un asesor
@@ -303,7 +303,7 @@ export const HomePage = () => {
         <div className="hero-panel">
           <div className="hero-stat">
             <strong>{properties.filter((item) => isPropertyPubliclyVisible(item)).length}+</strong>
-            <span>propiedades activas</span>
+            <span>publicaciones activas</span>
           </div>
           <div className="hero-stat">
             <strong>{propertyTypes.length}</strong>
@@ -320,7 +320,7 @@ export const HomePage = () => {
         <div className="section-heading">
           <div>
             <span className="section-chip">Destacadas</span>
-            <h2>Propiedades destacadas</h2>
+            <h2>Publicaciones destacadas</h2>
           </div>
           <Link to="/propiedades" className="primary-link">
             Ver todas <FontAwesomeIcon icon={faArrowRight} />
@@ -362,7 +362,7 @@ export const HomePage = () => {
         <div className="service-card">
           <FontAwesomeIcon icon={faMagnifyingGlass} />
           <h3>Gestion de busqueda</h3>
-          <p>Filtramos propiedades activas, destacadas y por tipo en una sola plataforma.</p>
+          <p>Filtramos publicaciones activas, destacadas y por tipo en una sola plataforma.</p>
         </div>
         <div className="service-card">
           <FontAwesomeIcon icon={faPhoneVolume} />
@@ -448,7 +448,7 @@ export const PropertyListPage = () => {
   );
 
   if (isLoading) {
-    return <section className="content-section"><h2>Cargando propiedades...</h2></section>;
+    return <section className="content-section"><h2>Cargando publicaciones...</h2></section>;
   }
 
   return (
@@ -456,7 +456,7 @@ export const PropertyListPage = () => {
       <div className="section-heading">
         <div>
           <span className="section-chip">Catalogo</span>
-          <h1>Listado de propiedades</h1>
+          <h1>Listado de publicaciones</h1>
         </div>
       </div>
       <div className="filter-bar">
@@ -520,7 +520,7 @@ export const PropertyTypePage = () => {
   if (!propertyType) {
     return (
       <section className="content-section">
-        <h1>Tipo de propiedad no encontrado</h1>
+        <h1>Tipo de publicacion no encontrado</h1>
       </section>
     );
   }
@@ -529,7 +529,7 @@ export const PropertyTypePage = () => {
     <section className="content-section">
       <div className="section-heading">
         <div>
-          <span className="section-chip">Tipo de propiedad</span>
+          <span className="section-chip">Tipo de publicacion</span>
           <h1>{propertyType.name}</h1>
           <p>{propertyType.description}</p>
         </div>
@@ -565,7 +565,7 @@ export const PropertyDetailPage = () => {
   if (!property) {
     return (
       <section className="content-section">
-        <h1>Propiedad no encontrada</h1>
+        <h1>Publicacion no encontrada</h1>
       </section>
     );
   }
@@ -573,7 +573,7 @@ export const PropertyDetailPage = () => {
   if (!isPropertyPubliclyVisible(property)) {
     return (
       <section className="content-section">
-        <h1>Propiedad no disponible para publicacion</h1>
+        <h1>Publicacion no disponible para publicacion</h1>
       </section>
     );
   }
@@ -744,7 +744,7 @@ export const AboutPage = () => {
       <h1>Somos una inmobiliaria orientada a confianza, seleccion y velocidad comercial</h1>
       <p>
         {companyProfile.name} combina presentacion moderna, gestion comercial y seguimiento de
-        prospectos en una sola plataforma. El objetivo es que el cliente vea propiedades activas
+        prospectos en una sola plataforma. El objetivo es que el cliente vea publicaciones activas
         y que el equipo administre catalogo, agentes, tipos, zonas y solicitudes desde un panel
         central.
       </p>
@@ -755,7 +755,7 @@ export const AboutPage = () => {
         </div>
         <div className="service-card">
           <h3>Operacion ordenada</h3>
-          <p>Las propiedades se activan, destacan o despublican desde administracion.</p>
+          <p>Las publicaciones se activan, destacan o despublican desde administracion.</p>
         </div>
         <div className="service-card">
           <h3>Atencion continua</h3>

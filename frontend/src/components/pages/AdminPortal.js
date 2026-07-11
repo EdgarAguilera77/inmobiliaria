@@ -340,8 +340,8 @@ const PropertyFormModal = ({
       <div className="admin-modal admin-modal-wide" onClick={(event) => event.stopPropagation()}>
         <div className="admin-modal-header">
           <div>
-            <span className="section-chip">Propiedades</span>
-            <h3>{editingId ? 'Editar propiedad' : 'Nueva propiedad'}</h3>
+            <span className="section-chip">Publicaciones</span>
+            <h3>{editingId ? 'Editar publicacion' : 'Nueva publicacion'}</h3>
           </div>
           <button type="button" className="table-button ghost" onClick={onClose}>
             Cerrar
@@ -955,9 +955,9 @@ export const AdminDashboardPage = () => {
         text="Resumen general de catalogo, visibilidad comercial y solicitudes entrantes."
       />
       <div className="admin-stat-grid">
-        <AdminStatCard label="Propiedades activas" value={activeProperties} accent="accent-one" />
+        <AdminStatCard label="Publicaciones activas" value={activeProperties} accent="accent-one" />
         <AdminStatCard
-          label="Propiedades destacadas"
+          label="Publicaciones destacadas"
           value={featuredProperties}
           accent="accent-two"
         />
@@ -983,8 +983,8 @@ export const AdminDashboardPage = () => {
           <ul className="admin-list">
             <li>Tipos de propiedad: {propertyTypes.length}</li>
             <li>Zonas o ciudades: {zones.length}</li>
-            <li>Propiedades publicadas: {publishedProperties}</li>
-            <li>Propiedades ocultas: {properties.length - activeProperties}</li>
+            <li>Publicaciones publicadas: {publishedProperties}</li>
+            <li>Publicaciones ocultas: {properties.length - activeProperties}</li>
             <li>Planes activos: {plans.filter((plan) => plan.active).length}</li>
           </ul>
         </div>
@@ -1198,25 +1198,25 @@ export const AdminPropertiesPage = () => {
   };
 
   if (isLoading) {
-    return <div className="admin-page"><h2>Cargando propiedades...</h2></div>;
+    return <div className="admin-page"><h2>Cargando publicaciones...</h2></div>;
   }
 
   return (
     <div className="admin-page">
       <SectionHeader
-        title="Propiedades"
+        title="Publicaciones"
         text="Administra el inventario inmobiliario desde un listado central con acciones rapidas."
       />
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       {imageError && <div className="feedback-banner error">{imageError}</div>}
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
-          <span>{statusTab === 'Vendidas' ? 'Propiedades vendidas' : 'Propiedades disponibles'}</span>
+          <span>{statusTab === 'Vendidas' ? 'Publicaciones vendidas' : 'Publicaciones disponibles'}</span>
           <strong>{filteredProperties.length}</strong>
         </div>
         {canCreate && (
           <button type="button" className="primary-button" onClick={openNewPropertyModal}>
-            Nueva propiedad
+            Nueva publicacion
           </button>
         )}
       </div>
@@ -1238,7 +1238,7 @@ export const AdminPropertiesPage = () => {
           </button>
         </div>
         <span className="history-counter">
-          {filteredProperties.length} {filteredProperties.length === 1 ? 'propiedad' : 'propiedades'}
+          {filteredProperties.length} {filteredProperties.length === 1 ? 'publicacion' : 'publicaciones'}
         </span>
       </div>
       <div className="admin-panel">
