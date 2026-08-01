@@ -4,6 +4,9 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 const db = require('../db');
 
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOGIN_BLOCK_MINUTES = 5;
+
 const mapUserStatusToAgentStatus = (status) => (Number(status) === 1 ? 'Activo' : 'Inactivo');
 
 const ensureLinkedAgent = async (
@@ -71,7 +74,18 @@ const getSqlErrorMessage = (error, fallbackMessage) => {
     return 'Faltan datos obligatorios para completar la operacion.';
   }
 
+  if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
+    return 'No se puede eliminar el usuario porque aun tiene informacion relacionada en el sistema.';
+  }
+
   return fallbackMessage;
+};
+
+const buildLockoutMessage = (blockedUntil) => {
+  const blockedDate = blockedUntil instanceof Date ? blockedUntil : new Date(blockedUntil);
+  const remainingMs = blockedDate.getTime() - Date.now();
+  const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+  return `Has excedido los ${MAX_LOGIN_ATTEMPTS} intentos permitidos. Intenta nuevamente en ${remainingMinutes} minuto(s).`;
 };
 
 // Login de usuario
@@ -90,11 +104,55 @@ router.post('/login', async (req, res) => {
     }
 
     const user = userRows[0];
+
+    if (user.BLOQUEADO_HASTA && new Date(user.BLOQUEADO_HASTA) > new Date()) {
+      return res.status(423).json({
+        message: buildLockoutMessage(user.BLOQUEADO_HASTA),
+      });
+    }
+
     const isPasswordMatch = await bcrypt.compare(PASSWORD, user.PASSWORD);
 
     if (!isPasswordMatch) {
-      return res.status(401).json({ message: 'Credenciales invalidas' });
+      const nextFailedAttempts = Number(user.INTENTOS_LOGIN_FALLIDOS || 0) + 1;
+
+      if (nextFailedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        await db.query(
+          `
+            UPDATE gestion_usuarios
+            SET INTENTOS_LOGIN_FALLIDOS = ?, BLOQUEADO_HASTA = DATE_ADD(NOW(), INTERVAL ? MINUTE)
+            WHERE CODIGO = ?
+          `,
+          [MAX_LOGIN_ATTEMPTS, LOGIN_BLOCK_MINUTES, user.CODIGO]
+        );
+
+        return res.status(423).json({
+          message: `Has excedido los ${MAX_LOGIN_ATTEMPTS} intentos permitidos. Tu acceso fue bloqueado durante ${LOGIN_BLOCK_MINUTES} minutos.`,
+        });
+      }
+
+      await db.query(
+        `
+          UPDATE gestion_usuarios
+          SET INTENTOS_LOGIN_FALLIDOS = ?, BLOQUEADO_HASTA = NULL
+          WHERE CODIGO = ?
+        `,
+        [nextFailedAttempts, user.CODIGO]
+      );
+
+      return res.status(401).json({
+        message: `Credenciales invalidas. Intento ${nextFailedAttempts} de ${MAX_LOGIN_ATTEMPTS}.`,
+      });
     }
+
+    await db.query(
+      `
+        UPDATE gestion_usuarios
+        SET INTENTOS_LOGIN_FALLIDOS = 0, BLOQUEADO_HASTA = NULL
+        WHERE CODIGO = ?
+      `,
+      [user.CODIGO]
+    );
 
     if (user.ESTADO === 0) {
       return res.status(403).json({ message: 'Usuario inactivo' });
@@ -387,7 +445,12 @@ router.delete('/:codigo', async (req, res) => {
       await connection.rollback();
     }
     console.error('Error en la base de datos:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error: getSqlErrorMessage(
+        err,
+        'No se pudo eliminar el usuario porque tiene informacion relacionada en el sistema.'
+      ),
+    });
   } finally {
     connection?.release();
   }

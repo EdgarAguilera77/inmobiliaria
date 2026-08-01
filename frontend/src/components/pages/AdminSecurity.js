@@ -612,7 +612,13 @@ export const AdminUsersPage = () => {
         resetForm();
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'No se pudo eliminar el usuario.');
+      const backendMessage = requestError.response?.data?.error || '';
+      setError(
+        backendMessage.includes('foreign key') ||
+          backendMessage.includes('Cannot delete or update a parent row')
+          ? 'No se pudo eliminar el usuario porque aun tiene informacion relacionada en el sistema.'
+          : backendMessage || 'No se pudo eliminar el usuario.'
+      );
     }
   };
 

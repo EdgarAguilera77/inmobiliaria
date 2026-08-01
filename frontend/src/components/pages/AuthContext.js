@@ -1,4 +1,4 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../../constants/api';
 import {
@@ -9,6 +9,25 @@ import {
 
 export const AuthContext = createContext();
 
+const AUTH_STORAGE_KEY = 'globaljm_auth_state';
+
+const readStoredAuthState = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue);
+  } catch (error) {
+    return null;
+  }
+};
+
 const buildAdminPermissions = () =>
   ADMIN_PERMISSION_KEYS.flatMap((permission) =>
     MANAGED_PERMISSION_NAMES.map((permissionName) => ({
@@ -18,14 +37,51 @@ const buildAdminPermissions = () =>
   );
 
 export const AuthProvider = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-  const [permissions, setPermissions] = useState([]);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const storedAuthState = readStoredAuthState();
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(storedAuthState?.isLoggedIn));
+  const [user, setUser] = useState(storedAuthState?.user || null);
+  const [permissions, setPermissions] = useState(storedAuthState?.permissions || []);
+  const [isAdmin, setIsAdmin] = useState(Boolean(storedAuthState?.isAdmin));
   const [error, setError] = useState('');
-  const [cambiarPassword, setCambiarPassword] = useState(false);
-  const [requiresTermsAcceptance, setRequiresTermsAcceptance] = useState(false);
-  const [termsDocument, setTermsDocument] = useState(null);
+  const [cambiarPassword, setCambiarPassword] = useState(
+    Boolean(storedAuthState?.cambiarPassword)
+  );
+  const [requiresTermsAcceptance, setRequiresTermsAcceptance] = useState(
+    Boolean(storedAuthState?.requiresTermsAcceptance)
+  );
+  const [termsDocument, setTermsDocument] = useState(storedAuthState?.termsDocument || null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (!isLoggedIn || !user) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        isLoggedIn,
+        user,
+        permissions,
+        isAdmin,
+        cambiarPassword,
+        requiresTermsAcceptance,
+        termsDocument,
+      })
+    );
+  }, [
+    cambiarPassword,
+    isAdmin,
+    isLoggedIn,
+    permissions,
+    requiresTermsAcceptance,
+    termsDocument,
+    user,
+  ]);
 
   const loadTermsStatus = async (codigoUsuario, fallbackRequired = false) => {
     try {
@@ -58,6 +114,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { user: loggedUser, cambiarPassword: requiresPasswordChange } = response.data;
+      const normalizedRoleId = Number(loggedUser.ID_ROL);
 
       setUser(loggedUser);
       setIsLoggedIn(true);
@@ -67,7 +124,7 @@ export const AuthProvider = ({ children }) => {
         Boolean(loggedUser.REQUIERE_ACEPTACION_TERMINOS)
       );
 
-      if (loggedUser.ID_ROL === 1) {
+      if (normalizedRoleId === 1) {
         const adminPermissions = buildAdminPermissions();
         setPermissions(adminPermissions);
         setIsAdmin(true);
@@ -91,8 +148,10 @@ export const AuthProvider = ({ children }) => {
         };
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al iniciar sesion. Verifique las credenciales.');
-      return { success: false, message: 'Credenciales invalidas o error al obtener permisos.' };
+      const message =
+        err.response?.data?.message || 'Error al iniciar sesion. Verifique las credenciales.';
+      setError(message);
+      return { success: false, message };
     }
   };
 

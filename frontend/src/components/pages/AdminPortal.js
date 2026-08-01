@@ -1411,9 +1411,6 @@ export const AdminPropertiesPage = () => {
             Vendidas
           </button>
         </div>
-        <span className="history-counter">
-          {filteredProperties.length} {filteredProperties.length === 1 ? 'publicacion' : 'publicaciones'}
-        </span>
       </div>
       <div className="admin-panel">
         <table className="admin-table">
