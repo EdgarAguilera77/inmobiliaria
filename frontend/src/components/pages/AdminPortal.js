@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { Link, useLocation } from 'react-router-dom';
 import { useRealEstate } from '../../contexts/RealEstateContext';
 import { AuthContext } from './AuthContext';
 import { API_BASE } from '../../constants/api';
@@ -312,10 +313,12 @@ const PropertyFormModal = ({
   propertyTypes,
   zones,
   agents,
+  loggedAgent,
   handleCoverFileChange,
   handleGalleryFileChange,
   propertyImagePreviews,
   imageError,
+  isSaving,
   onClose,
   onSubmit,
 }) => {
@@ -412,25 +415,29 @@ const PropertyFormModal = ({
             </select>
           </div>
           <div className="admin-form-row">
-            <select
-              value={formData.agentId}
-              onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
-              required
-              disabled={!canCreate}
-            >
-              <option value="">Agente</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {editingId || !loggedAgent ? (
+              <select
+                value={formData.agentId}
+                onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
+                required
+                disabled={!canCreate || isSaving}
+              >
+                <option value="">Agente</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input value={loggedAgent.name} readOnly disabled />
+            )}
             <input
               value={formData.price}
               onChange={(event) => setFormData({ ...formData, price: event.target.value })}
               placeholder={propertyCategory === PROPERTY_CATEGORY.SERVICIO ? 'Tarifa' : 'Precio'}
               required
-              disabled={!canCreate}
+              disabled={!canCreate || isSaving}
             />
             {propertyCategory === PROPERTY_CATEGORY.INMUEBLE && (
               <input
@@ -438,7 +445,7 @@ const PropertyFormModal = ({
                 onChange={(event) => setFormData({ ...formData, area: event.target.value })}
                 placeholder="Area m2"
                 required
-                disabled={!canCreate}
+                disabled={!canCreate || isSaving}
               />
             )}
           </div>
@@ -664,8 +671,18 @@ const PropertyFormModal = ({
             </label>
           </div>
           <div className="table-actions">
-            <button type="submit" className="primary-button" disabled={!canCreate}>
-              {editingId ? 'Actualizar propiedad' : 'Crear propiedad'}
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={!canCreate || isSaving || (!editingId && !formData.agentId)}
+            >
+              {isSaving
+                ? editingId
+                  ? 'Actualizando...'
+                  : 'Guardando...'
+                : editingId
+                  ? 'Actualizar publicacion'
+                  : 'Crear publicacion'}
             </button>
             <button type="button" className="secondary-button" onClick={onClose}>
               Cancelar
@@ -908,6 +925,7 @@ const ZoneFormModal = ({
 };
 
 export const AdminDashboardPage = () => {
+  const { user, isAdmin } = useContext(AuthContext);
   const {
     properties,
     agents,
@@ -921,24 +939,103 @@ export const AdminDashboardPage = () => {
     publicationPayments,
     isLoading,
   } = useRealEstate();
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const isAgentScopedView = !isAdmin;
+  const scopedProperties = useMemo(
+    () =>
+      isAdmin
+        ? properties
+        : loggedAgent
+          ? properties.filter((property) => String(property.agentId) === String(loggedAgent.id))
+          : [],
+    [isAdmin, loggedAgent, properties]
+  );
+  const scopedPropertyIds = useMemo(
+    () => new Set(scopedProperties.map((property) => String(property.id))),
+    [scopedProperties]
+  );
+  const scopedContacts = useMemo(
+    () =>
+      isAdmin
+        ? contacts
+        : contacts.filter(
+            (contact) =>
+              contact.propertyId && scopedPropertyIds.has(String(contact.propertyId))
+          ),
+    [contacts, isAdmin, scopedPropertyIds]
+  );
+  const scopedSales = useMemo(
+    () =>
+      isAdmin
+        ? sales
+        : loggedAgent
+          ? sales.filter((sale) => String(sale.agentId) === String(loggedAgent.id))
+          : [],
+    [isAdmin, loggedAgent, sales]
+  );
+  const scopedCommissions = useMemo(
+    () =>
+      isAdmin
+        ? commissions
+        : loggedAgent
+          ? commissions.filter((commission) => String(commission.agentId) === String(loggedAgent.id))
+          : [],
+    [commissions, isAdmin, loggedAgent]
+  );
+  const scopedSubscriptions = useMemo(
+    () =>
+      isAdmin
+        ? subscriptions
+        : loggedAgent
+          ? subscriptions.filter(
+              (subscription) => String(subscription.agentId) === String(loggedAgent.id)
+            )
+          : [],
+    [isAdmin, loggedAgent, subscriptions]
+  );
+  const scopedSubscriptionIds = useMemo(
+    () => new Set(scopedSubscriptions.map((subscription) => String(subscription.id))),
+    [scopedSubscriptions]
+  );
+  const scopedPublicationPayments = useMemo(
+    () =>
+      isAdmin
+        ? publicationPayments
+        : publicationPayments.filter((payment) =>
+            scopedSubscriptionIds.has(String(payment.subscriptionId))
+          ),
+    [publicationPayments, isAdmin, scopedSubscriptionIds]
+  );
 
   if (isLoading) {
     return <div className="admin-page"><h2>Cargando dashboard...</h2></div>;
   }
 
-  const activeProperties = properties.filter((property) => property.active).length;
-  const featuredProperties = properties.filter((property) => property.featured).length;
-  const newContacts = contacts.filter((contact) => contact.status === 'Nuevo').length;
-  const monthlySalesTotal = sales
+  const activeProperties = scopedProperties.filter((property) => property.active).length;
+  const featuredProperties = scopedProperties.filter((property) => property.featured).length;
+  const newContacts = scopedContacts.filter((contact) => contact.status === 'Abierta').length;
+  const monthlySalesTotal = scopedSales
     .filter((sale) => String(sale.closingDate).slice(0, 7) === new Date().toISOString().slice(0, 7))
     .reduce((total, sale) => total + sale.closingPrice, 0);
-  const pendingCommissions = commissions
+  const pendingCommissions = scopedCommissions
     .filter((commission) => commission.status === 'Pendiente')
     .reduce((total, commission) => total + commission.amount, 0);
-  const publishedProperties = properties.filter(
+  const publishedProperties = scopedProperties.filter(
     (property) => property.active && property.publicationStatus === 'Publicada'
   ).length;
-  const monthlySubscriptionRevenue = publicationPayments
+  const scopedTypeCount = new Set(scopedProperties.map((property) => String(property.typeId))).size;
+  const scopedZoneCount = new Set(scopedProperties.map((property) => String(property.zoneId))).size;
+  const scopedActivePlansCount = isAdmin
+    ? plans.filter((plan) => plan.active).length
+    : new Set(
+        scopedSubscriptions
+          .filter((subscription) => subscription.status === 'Activa')
+          .map((subscription) => String(subscription.planId))
+      ).size;
+  const monthlySubscriptionRevenue = scopedPublicationPayments
     .filter(
       (payment) =>
         payment.status === 'Pagado' &&
@@ -952,8 +1049,23 @@ export const AdminDashboardPage = () => {
       <SectionHeader
         eyebrow="Administrativo"
         title="Dashboard"
-        text="Resumen general de catalogo, visibilidad comercial y solicitudes entrantes."
+        text={
+          isAgentScopedView
+            ? 'Resumen personal de tus publicaciones, solicitudes y seguimiento comercial.'
+            : 'Resumen general de catalogo, visibilidad comercial y solicitudes entrantes.'
+        }
       />
+      {isAgentScopedView && loggedAgent && (
+        <div className="permission-hint">
+          Vista filtrada para el agente <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {isAgentScopedView && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso el dashboard muestra valores en
+          cero hasta completar esa relacion.
+        </div>
+      )}
       <div className="admin-stat-grid">
         <AdminStatCard label="Publicaciones activas" value={activeProperties} accent="accent-one" />
         <AdminStatCard
@@ -964,7 +1076,15 @@ export const AdminDashboardPage = () => {
         <AdminStatCard label="Solicitudes nuevas" value={newContacts} accent="accent-three" />
         <AdminStatCard
           label="Agentes activos"
-          value={agents.filter((agent) => agent.status === 'Activo').length}
+          value={
+            isAgentScopedView
+              ? agents.filter(
+                  (agent) =>
+                    agent.status === 'Activo' &&
+                    String(agent.id) === String(loggedAgent.id)
+                ).length
+              : agents.filter((agent) => agent.status === 'Activo').length
+          }
         />
         <AdminStatCard label="Ventas del mes" value={formatCurrency(monthlySalesTotal, 0)} />
         <AdminStatCard
@@ -981,21 +1101,37 @@ export const AdminDashboardPage = () => {
         <div className="admin-panel">
           <h3>Estado del inventario</h3>
           <ul className="admin-list">
-            <li>Tipos de propiedad: {propertyTypes.length}</li>
-            <li>Zonas o ciudades: {zones.length}</li>
+            <li>Tipos de propiedad: {isAgentScopedView ? scopedTypeCount : propertyTypes.length}</li>
+            <li>Zonas o ciudades: {isAgentScopedView ? scopedZoneCount : zones.length}</li>
             <li>Publicaciones publicadas: {publishedProperties}</li>
-            <li>Publicaciones ocultas: {properties.length - activeProperties}</li>
-            <li>Planes activos: {plans.filter((plan) => plan.active).length}</li>
+            <li>Publicaciones ocultas: {scopedProperties.length - activeProperties}</li>
+            <li>Planes activos: {scopedActivePlansCount}</li>
           </ul>
         </div>
         <div className="admin-panel">
           <h3>Seguimiento comercial</h3>
           <ul className="admin-list">
-            <li>Suscripciones activas: {subscriptions.filter((item) => item.status === 'Activa').length}</li>
-            <li>Pagos pendientes: {publicationPayments.filter((item) => item.status === 'Pendiente').length}</li>
-            {contacts.slice(0, 5).map((contact) => (
+            <li>
+              <Link
+                to={
+                  isAgentScopedView && loggedAgent
+                    ? `/admin/suscripciones?agentId=${loggedAgent.id}&status=Activa`
+                    : '/admin/suscripciones?status=Activa'
+                }
+              >
+                Suscripciones activas: {scopedSubscriptions.filter((item) => item.status === 'Activa').length}
+              </Link>
+            </li>
+            <li>
+              Pagos pendientes:{' '}
+              {scopedPublicationPayments.filter((item) => item.status === 'Pendiente').length}
+            </li>
+            {scopedContacts.slice(0, 5).map((contact) => (
               <li key={contact.id}>
-                <strong>{contact.name}</strong> - {contact.status}
+                <Link to={`/admin/contactos?client=${encodeURIComponent(contact.name)}`}>
+                  <strong>{contact.name}</strong>
+                </Link>{' '}
+                - {contact.status}
               </li>
             ))}
           </ul>
@@ -1006,7 +1142,7 @@ export const AdminDashboardPage = () => {
 };
 
 export const AdminPropertiesPage = () => {
-  const { hasPermission, user } = useContext(AuthContext);
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
   const {
     agents,
     commissionSettings,
@@ -1033,6 +1169,20 @@ export const AdminPropertiesPage = () => {
   const [statusTab, setStatusTab] = useState('Disponibles');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [isSavingProperty, setIsSavingProperty] = useState(false);
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const scopedProperties = useMemo(
+    () =>
+      isAdmin
+        ? properties
+        : loggedAgent
+          ? properties.filter((property) => String(property.agentId) === String(loggedAgent.id))
+          : [],
+    [isAdmin, loggedAgent, properties]
+  );
 
   const propertyImagePreviews = useMemo(
     () => formData.images.filter(Boolean),
@@ -1041,11 +1191,11 @@ export const AdminPropertiesPage = () => {
 
   const filteredProperties = useMemo(() => {
     if (statusTab === 'Vendidas') {
-      return properties.filter((property) => property.commercialStatus === 'Vendida');
+      return scopedProperties.filter((property) => property.commercialStatus === 'Vendida');
     }
 
-    return properties.filter((property) => property.commercialStatus === 'Disponible');
-  }, [properties, statusTab]);
+    return scopedProperties.filter((property) => property.commercialStatus === 'Disponible');
+  }, [scopedProperties, statusTab]);
   const totalPages = Math.max(1, Math.ceil(filteredProperties.length / itemsPerPage));
   const paginatedProperties = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -1146,13 +1296,17 @@ export const AdminPropertiesPage = () => {
     setIsPropertyModalOpen(false);
     setEditingId(null);
     setImageError('');
+    setIsSavingProperty(false);
     setFormData(emptyProperty);
   };
 
   const openNewPropertyModal = () => {
     setEditingId(null);
     setImageError('');
-    setFormData(emptyProperty);
+    setFormData({
+      ...emptyProperty,
+      agentId: loggedAgent ? String(loggedAgent.id) : '',
+    });
     setIsPropertyModalOpen(true);
   };
 
@@ -1188,13 +1342,23 @@ export const AdminPropertiesPage = () => {
 
   const submitForm = async (event) => {
     event.preventDefault();
-    if (!canCreate) {
+    if (!canCreate || isSavingProperty) {
       return;
     }
     setImageError('');
-    const fallbackCoverImage = formData.coverImage || formData.images.find(Boolean) || '';
-    await saveProperty({ ...formData, id: editingId, coverImage: fallbackCoverImage });
-    closePropertyModal();
+    setIsSavingProperty(true);
+    try {
+      const fallbackCoverImage = formData.coverImage || formData.images.find(Boolean) || '';
+      await saveProperty({
+        ...formData,
+        id: editingId,
+        agentId: editingId ? formData.agentId : loggedAgent?.id || formData.agentId,
+        coverImage: fallbackCoverImage,
+      });
+      closePropertyModal();
+    } finally {
+      setIsSavingProperty(false);
+    }
   };
 
   if (isLoading) {
@@ -1207,6 +1371,16 @@ export const AdminPropertiesPage = () => {
         title="Publicaciones"
         text="Administra el inventario inmobiliario desde un listado central con acciones rapidas."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo las publicaciones del agente <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran publicaciones.
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       {imageError && <div className="feedback-banner error">{imageError}</div>}
       <div className="admin-panel-toolbar">
@@ -1332,10 +1506,12 @@ export const AdminPropertiesPage = () => {
         propertyTypes={propertyTypes}
         zones={zones}
         agents={agents}
+        loggedAgent={loggedAgent}
         handleCoverFileChange={handleCoverFileChange}
         handleGalleryFileChange={handleGalleryFileChange}
         propertyImagePreviews={propertyImagePreviews}
         imageError={imageError}
+        isSaving={isSavingProperty}
         onClose={closePropertyModal}
         onSubmit={submitForm}
       />
@@ -1770,8 +1946,10 @@ export const AdminImagesPage = () => {
 };
 
 export const AdminContactsPage = () => {
-  const { hasPermission } = useContext(AuthContext);
-  const { contacts, properties, updateContactStatus, deleteContact, isLoading } = useRealEstate();
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
+  const location = useLocation();
+  const { contacts, properties, agents, updateContactStatus, deleteContact, isLoading } =
+    useRealEstate();
   const canCreate = hasPermission('Contactos', 'CREAR');
   const canDelete = hasPermission('Contactos', 'ELIMINAR');
   const [statusTab, setStatusTab] = useState('Abiertas');
@@ -1779,25 +1957,60 @@ export const AdminContactsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const scopedProperties = useMemo(
+    () =>
+      isAdmin
+        ? properties
+        : loggedAgent
+          ? properties.filter((property) => String(property.agentId) === String(loggedAgent.id))
+          : [],
+    [isAdmin, loggedAgent, properties]
+  );
+  const scopedPropertyIds = useMemo(
+    () => new Set(scopedProperties.map((property) => String(property.id))),
+    [scopedProperties]
+  );
   const propertyNameById = useMemo(
     () =>
-      properties.reduce((accumulator, property) => {
+      scopedProperties.reduce((accumulator, property) => {
         accumulator[property.id] = property.title;
         return accumulator;
       }, {}),
-    [properties]
+    [scopedProperties]
+  );
+  const clientFilter = useMemo(
+    () => new URLSearchParams(location.search).get('client')?.trim().toLowerCase() || '',
+    [location.search]
   );
 
   const filteredContacts = useMemo(() => {
     const normalizedStatus = statusTab === 'Cerradas' ? 'Cerrada' : 'Abierta';
-    const matchesStatus = contacts.filter((contact) => contact.status === normalizedStatus);
+    const scopedBaseContacts = isAdmin
+      ? contacts
+      : contacts.filter(
+          (contact) => contact.propertyId && scopedPropertyIds.has(String(contact.propertyId))
+        );
+    const matchesStatus = scopedBaseContacts.filter(
+      (contact) => contact.status === normalizedStatus
+    );
+    const clientScopedContacts = clientFilter
+      ? matchesStatus.filter((contact) =>
+          [contact.name, contact.email, contact.phone]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(clientFilter))
+        )
+      : matchesStatus;
 
-    return [...matchesStatus].sort((left, right) => {
+    return [...clientScopedContacts].sort((left, right) => {
       const leftDate = new Date(left.createdAt || 0).getTime();
       const rightDate = new Date(right.createdAt || 0).getTime();
       return sortOrder === 'recent' ? rightDate - leftDate : leftDate - rightDate;
     });
-  }, [contacts, sortOrder, statusTab]);
+  }, [clientFilter, contacts, isAdmin, scopedPropertyIds, sortOrder, statusTab]);
 
   const totalPages = Math.max(1, Math.ceil(filteredContacts.length / itemsPerPage));
 
@@ -1826,6 +2039,22 @@ export const AdminContactsPage = () => {
         title="Solicitudes y contactos"
         text="Actualiza el estado de cada lead desde el dashboard administrativo."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo solicitudes relacionadas con las publicaciones de{' '}
+          <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran solicitudes.
+        </div>
+      )}
+      {clientFilter && (
+        <div className="permission-hint">
+          Filtrando solicitudes por cliente: <strong>{clientFilter}</strong>
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       <div className="admin-history-toolbar">
         <div className="table-actions">

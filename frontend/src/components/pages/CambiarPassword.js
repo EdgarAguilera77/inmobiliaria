@@ -100,10 +100,13 @@ const CambiarPassword = () => {
             value={nuevaPassword}
             onChange={(event) => handlePasswordInput(event.target.value)}
           />
-          <div className={`password-strength ${passwordStrength}`}>
-            {passwordStrength === 'weak' && 'Muy corta'}
-            {passwordStrength === 'medium' && 'Lista para usar'}
-            {passwordStrength === 'strong' && 'Larga'}
+          <div className="password-strength-wrapper">
+            <div className={`password-strength-bar ${passwordStrength}`} />
+            <div className={`password-strength-label ${passwordStrength}`}>
+              {passwordStrength === 'weak' && 'Muy corta'}
+              {passwordStrength === 'medium' && 'Lista para usar'}
+              {passwordStrength === 'strong' && 'Larga'}
+            </div>
           </div>
         </div>
 

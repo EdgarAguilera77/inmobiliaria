@@ -1,7 +1,6 @@
 import {
   faChartLine,
   faBuilding,
-  faUserTie,
   faLayerGroup,
   faMapMarkedAlt,
   faImages,
@@ -64,12 +63,6 @@ export const ADMIN_MENU_ITEMS = [
     path: '/admin/propiedades',
     icon: faBuilding,
     permission: 'Propiedades',
-  },
-  {
-    name: 'Agentes',
-    path: '/admin/agentes',
-    icon: faUserTie,
-    permission: 'Agentes',
   },
   {
     name: 'Tipos',
@@ -154,7 +147,7 @@ export const ADMIN_MENU_GROUPS = [
   {
     key: 'catalogos',
     name: 'Catalogos',
-    items: ['Agentes', 'Tipos', 'Zonas', 'Imagenes', 'Planes'],
+    items: ['Tipos', 'Zonas', 'Imagenes', 'Planes'],
   },
   {
     key: 'seguridad',
@@ -162,3 +155,18 @@ export const ADMIN_MENU_GROUPS = [
     items: ['Usuarios', 'Aceptaciones legales', 'Roles y permisos'],
   },
 ];
+
+export const getFirstAccessibleAdminPath = (isAdmin, permissions = []) => {
+  if (isAdmin) {
+    return '/admin';
+  }
+
+  const firstAllowedItem = ADMIN_MENU_ITEMS.find((item) =>
+    permissions.some(
+      (permission) =>
+        permission.NOMBRE_OBJETO === item.permission && permission.NOMBRE_PERMISO === 'VER'
+    )
+  );
+
+  return firstAllowedItem?.path || '/admin';
+};

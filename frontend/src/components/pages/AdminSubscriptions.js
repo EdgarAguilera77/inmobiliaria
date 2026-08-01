@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from './AuthContext';
 import { useRealEstate } from '../../contexts/RealEstateContext';
 import AdminPagination from '../common/AdminPagination';
@@ -353,7 +354,8 @@ export const AdminPlansPage = () => {
 };
 
 export const AdminSubscriptionsPage = () => {
-  const { hasPermission } = useContext(AuthContext);
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
+  const location = useLocation();
   const { subscriptions, properties, plans, agents, saveSubscription, deleteSubscription, isLoading } =
     useRealEstate();
   const canCreate = hasPermission('Suscripciones', 'CREAR');
@@ -361,23 +363,55 @@ export const AdminSubscriptionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState(null);
   const [formData, setFormData] = useState(baseSubscriptionForm);
-  const pagination = useAdminPagination(subscriptions);
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const agentFilter = searchParams.get('agentId') || '';
+  const statusFilter = searchParams.get('status') || '';
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const scopedSubscriptions = useMemo(
+    () =>
+      isAdmin
+        ? subscriptions
+        : loggedAgent
+          ? subscriptions.filter(
+              (subscription) => String(subscription.agentId) === String(loggedAgent.id)
+            )
+          : [],
+    [isAdmin, loggedAgent, subscriptions]
+  );
+  const filteredSubscriptions = useMemo(
+    () =>
+      scopedSubscriptions.filter((subscription) => {
+        const matchesAgent = !agentFilter || String(subscription.agentId) === String(agentFilter);
+        const matchesStatus = !statusFilter || subscription.status === statusFilter;
+        return matchesAgent && matchesStatus;
+      }),
+    [agentFilter, scopedSubscriptions, statusFilter]
+  );
+  const pagination = useAdminPagination(filteredSubscriptions);
   const selectedPlan = useMemo(
     () => plans.find((plan) => String(plan.id) === String(formData.planId)),
     [plans, formData.planId]
   );
 
   const visibleProperties = useMemo(
-    () => properties.filter((property) => property.commercialStatus === 'Disponible'),
-    [properties]
+    () =>
+      properties.filter(
+        (property) =>
+          property.commercialStatus === 'Disponible' &&
+          (isAdmin || (loggedAgent && String(property.agentId) === String(loggedAgent.id)))
+      ),
+    [isAdmin, loggedAgent, properties]
   );
 
   const summary = useMemo(
     () => ({
-      active: subscriptions.filter((subscription) => subscription.status === 'Activa').length,
-      pending: subscriptions.filter((subscription) => subscription.status === 'Pendiente de pago')
+      active: filteredSubscriptions.filter((subscription) => subscription.status === 'Activa').length,
+      pending: filteredSubscriptions.filter((subscription) => subscription.status === 'Pendiente de pago')
         .length,
-      expiring: subscriptions.filter((subscription) => {
+      expiring: filteredSubscriptions.filter((subscription) => {
         if (subscription.status !== 'Activa') {
           return false;
         }
@@ -389,7 +423,7 @@ export const AdminSubscriptionsPage = () => {
         return diffDays >= 0 && diffDays <= 7;
       }).length,
     }),
-    [subscriptions]
+    [filteredSubscriptions]
   );
 
   const closeModal = () => {
@@ -402,6 +436,7 @@ export const AdminSubscriptionsPage = () => {
     setEditingSubscription(null);
     setFormData({
       ...baseSubscriptionForm,
+      agentId: loggedAgent ? String(loggedAgent.id) : '',
       startDate: todayString(),
       endDate: todayString(),
     });
@@ -466,6 +501,23 @@ export const AdminSubscriptionsPage = () => {
         title="Suscripciones"
         text="Controla que propiedad esta publicada, cuanto dura su exposicion y si ya cumplio el requisito de pago."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo las suscripciones del agente <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran suscripciones.
+        </div>
+      )}
+      {(agentFilter || statusFilter) && (
+        <div className="permission-hint">
+          Mostrando suscripciones filtradas
+          {agentFilter ? ` por agente ${agentFilter}` : ''}
+          {statusFilter ? ` con estado ${statusFilter}` : ''}.
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       <div className="admin-stat-grid admin-stat-grid-compact">
         <div className="admin-stat-card">
@@ -484,7 +536,7 @@ export const AdminSubscriptionsPage = () => {
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
           <span>Suscripciones registradas</span>
-          <strong>{subscriptions.length}</strong>
+          <strong>{filteredSubscriptions.length}</strong>
         </div>
         {canCreate && (
           <button type="button" className="primary-button" onClick={openNewModal}>
@@ -553,7 +605,7 @@ export const AdminSubscriptionsPage = () => {
         <AdminPagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
-          totalItems={subscriptions.length}
+          totalItems={filteredSubscriptions.length}
           itemsPerPage={pagination.itemsPerPage}
           onPageChange={pagination.setCurrentPage}
           onItemsPerPageChange={pagination.setItemsPerPage}
@@ -601,10 +653,10 @@ export const AdminSubscriptionsPage = () => {
             <select
               value={formData.agentId}
               onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
-              disabled={!canCreate}
+              disabled={!canCreate || !isAdmin}
             >
               <option value="">Agente responsable</option>
-              {agents.map((agent) => (
+              {(isAdmin ? agents : loggedAgent ? [loggedAgent] : []).map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
                 </option>
@@ -673,10 +725,11 @@ export const AdminSubscriptionsPage = () => {
 };
 
 export const AdminPublicationPaymentsPage = () => {
-  const { hasPermission } = useContext(AuthContext);
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
   const {
     publicationPayments,
     subscriptions,
+    agents,
     savePublicationPayment,
     deletePublicationPayment,
     isLoading,
@@ -686,31 +739,62 @@ export const AdminPublicationPaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [formData, setFormData] = useState(basePaymentForm);
-  const pagination = useAdminPagination(publicationPayments);
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const scopedSubscriptions = useMemo(
+    () =>
+      isAdmin
+        ? subscriptions
+        : loggedAgent
+          ? subscriptions.filter(
+              (subscription) => String(subscription.agentId) === String(loggedAgent.id)
+            )
+          : [],
+    [isAdmin, loggedAgent, subscriptions]
+  );
+  const scopedSubscriptionIds = useMemo(
+    () => new Set(scopedSubscriptions.map((subscription) => String(subscription.id))),
+    [scopedSubscriptions]
+  );
+  const filteredPublicationPayments = useMemo(
+    () =>
+      isAdmin
+        ? publicationPayments
+        : publicationPayments.filter((payment) =>
+            scopedSubscriptionIds.has(String(payment.subscriptionId))
+          ),
+    [isAdmin, publicationPayments, scopedSubscriptionIds]
+  );
+  const pagination = useAdminPagination(filteredPublicationPayments);
   const selectedSubscription = useMemo(
-    () => subscriptions.find((subscription) => String(subscription.id) === String(formData.subscriptionId)),
-    [subscriptions, formData.subscriptionId]
+    () =>
+      scopedSubscriptions.find(
+        (subscription) => String(subscription.id) === String(formData.subscriptionId)
+      ),
+    [scopedSubscriptions, formData.subscriptionId]
   );
   const availableSubscriptions = useMemo(
     () =>
-      subscriptions.filter(
+      scopedSubscriptions.filter(
         (subscription) =>
           subscription.status !== 'Cancelada' &&
           Number(subscription.totalPaid || 0) < Number(subscription.finalPrice || 0)
       ),
-    [subscriptions]
+    [scopedSubscriptions]
   );
 
   const summary = useMemo(
     () => ({
-      paid: publicationPayments
+      paid: filteredPublicationPayments
         .filter((payment) => payment.status === 'Pagado')
         .reduce((total, payment) => total + payment.amount, 0),
-      pending: publicationPayments
+      pending: filteredPublicationPayments
         .filter((payment) => payment.status === 'Pendiente')
         .reduce((total, payment) => total + payment.amount, 0),
     }),
-    [publicationPayments]
+    [filteredPublicationPayments]
   );
 
   const closeModal = () => {
@@ -780,6 +864,17 @@ export const AdminPublicationPaymentsPage = () => {
         title="Pagos de publicacion"
         text="Registra cobros, referencias y estado de pago para que la suscripcion controle la visibilidad publica."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo los pagos relacionados con las suscripciones del agente{' '}
+          <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran pagos.
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       <div className="admin-stat-grid admin-stat-grid-compact">
         <div className="admin-stat-card">
@@ -794,7 +889,7 @@ export const AdminPublicationPaymentsPage = () => {
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
           <span>Pagos registrados</span>
-          <strong>{publicationPayments.length}</strong>
+          <strong>{filteredPublicationPayments.length}</strong>
         </div>
         {canCreate && (
           <button type="button" className="primary-button" onClick={openNewModal}>
@@ -854,7 +949,7 @@ export const AdminPublicationPaymentsPage = () => {
         <AdminPagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
-          totalItems={publicationPayments.length}
+          totalItems={filteredPublicationPayments.length}
           itemsPerPage={pagination.itemsPerPage}
           onPageChange={pagination.setCurrentPage}
           onItemsPerPageChange={pagination.setItemsPerPage}
@@ -874,7 +969,7 @@ export const AdminPublicationPaymentsPage = () => {
             disabled={!canCreate || Boolean(editingPayment)}
           >
             <option value="">Suscripcion</option>
-            {(editingPayment ? subscriptions : availableSubscriptions).map((subscription) => (
+            {(editingPayment ? scopedSubscriptions : availableSubscriptions).map((subscription) => (
               <option key={subscription.id} value={subscription.id}>
                 {subscription.propertyTitle} - {subscription.planName}
               </option>

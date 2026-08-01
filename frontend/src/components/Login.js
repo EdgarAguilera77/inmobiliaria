@@ -95,7 +95,7 @@ const Login = () => {
     try {
       const result = await login(correo, password);
       if (result.success) {
-        navigate("/admin");
+        navigate(result.redirectTo || "/admin");
       } else {
         setLocalError(result.message || "Error al iniciar sesion");
       }

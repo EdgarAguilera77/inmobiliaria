@@ -13,12 +13,41 @@ const api = axios.create({
   baseURL: API_BASE,
 });
 
+const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+
+const uploadSingleImagePreview = async (file) => {
+  if (!file) {
+    return '';
+  }
+
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error(`La imagen ${file.name} supera el limite de 3 MB.`);
+  }
+
+  const imageBase64 = await readFileAsDataUrl(file);
+  const response = await api.post('/uploads/preview-base64', {
+    fileName: file.name,
+    imageBase64,
+  });
+
+  return response.data.previewUrl;
+};
+
 const emptyUser = {
   NOMBRE: '',
   IDENTIFICACION: '',
   CORREO: '',
   TELEFONO: '',
   PASSWORD: '',
+  FOTO_URL: '',
   ID_ROL: '',
   ID_SERVICIO: '',
   ESTADO: 1,
@@ -129,6 +158,8 @@ const UserEditModal = ({
   roles,
   services,
   canCreate,
+  imageError,
+  onPhotoFileChange,
   onClose,
   onSubmit,
 }) => {
@@ -148,6 +179,7 @@ const UserEditModal = ({
             Cerrar
           </button>
         </div>
+        {imageError && <div className="feedback-banner error">{imageError}</div>}
         <form
           className="compact-admin-form"
           onSubmit={onSubmit}
@@ -199,6 +231,32 @@ const UserEditModal = ({
             autoComplete={editingId ? 'new-password' : 'new-password'}
             name="user_new_password"
           />
+          <div className="file-upload-group">
+            <label className="file-upload-label" htmlFor="user-photo-file">
+              Subir foto desde el equipo
+            </label>
+            <input
+              id="user-photo-file"
+              type="file"
+              accept="image/*"
+              onChange={onPhotoFileChange}
+              disabled={!canCreate}
+            />
+          </div>
+          {formData.FOTO_URL && (
+            <div className="image-upload-preview">
+              <img src={formData.FOTO_URL} alt={formData.NOMBRE || 'Foto del usuario'} />
+              {canCreate && (
+                <button
+                  type="button"
+                  className="table-button danger"
+                  onClick={() => setFormData((current) => ({ ...current, FOTO_URL: '' }))}
+                >
+                  Quitar foto
+                </button>
+              )}
+            </div>
+          )}
           <div className="admin-form-row">
             <select
               value={formData.ID_ROL}
@@ -347,6 +405,7 @@ const mapUser = (user) => ({
   IDENTIFICACION: user.IDENTIFICACION,
   CORREO: user.CORREO,
   TELEFONO: user.TELEFONO,
+  FOTO_URL: user.FOTO_URL || '',
   ID_ROL: user.ID_ROL,
   ID_SERVICIO: user.ID_SERVICIO,
   ESTADO: Number(user.ESTADO),
@@ -374,6 +433,7 @@ export const AdminUsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
+  const [imageError, setImageError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const getDefaultServiceId = () =>
@@ -441,6 +501,7 @@ export const AdminUsersPage = () => {
       ID_ROL: String(roles[0]?.ID_ROL || ''),
       ID_SERVICIO: getDefaultServiceId(),
     });
+    setImageError('');
     setEditingId(null);
   };
 
@@ -508,12 +569,31 @@ export const AdminUsersPage = () => {
       CORREO: selectedUser.CORREO,
       TELEFONO: selectedUser.TELEFONO,
       PASSWORD: '',
+      FOTO_URL: selectedUser.FOTO_URL || '',
       ID_ROL: String(selectedUser.ID_ROL),
       ID_SERVICIO: String(selectedUser.ID_SERVICIO || getDefaultServiceId()),
       ESTADO: Number(selectedUser.ESTADO),
       REQUIERE_ACEPTACION_TERMINOS: Number(selectedUser.REQUIERE_ACEPTACION_TERMINOS || 0),
     });
+    setImageError('');
     setIsUserModalOpen(true);
+  };
+
+  const handleUserPhotoFileChange = async (event) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles?.length) {
+      return;
+    }
+
+    try {
+      setImageError('');
+      const photoUrl = await uploadSingleImagePreview(selectedFiles[0]);
+      setFormData((current) => ({ ...current, FOTO_URL: photoUrl }));
+    } catch (requestError) {
+      setImageError(requestError.message);
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const removeUser = async (codigo) => {
@@ -626,6 +706,8 @@ export const AdminUsersPage = () => {
         roles={roles}
         services={services}
         canCreate={canCreate}
+        imageError={imageError}
+        onPhotoFileChange={handleUserPhotoFileChange}
         onClose={closeUserModal}
         onSubmit={handleSubmit}
       />

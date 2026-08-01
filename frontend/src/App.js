@@ -35,6 +35,7 @@ import {
 } from './components/pages/AdminSubscriptions';
 import { AdminLegalTermsPage } from './components/pages/AdminLegalTermsPage';
 import { RealEstateProvider } from './contexts/RealEstateContext';
+import { getFirstAccessibleAdminPath } from './constants/permissions';
 import './App.css';
 
 const PrivateRoute = ({ children, requiredPermission }) => {
@@ -56,11 +57,16 @@ const PrivateRoute = ({ children, requiredPermission }) => {
 
 const AppContent = () => {
   const location = useLocation();
-  const { isLoggedIn, logout, cambiarPassword, requiresTermsAcceptance } = useContext(AuthContext);
+  const { isLoggedIn, logout, cambiarPassword, requiresTermsAcceptance, isAdmin, permissions } =
+    useContext(AuthContext);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const isAdminRoute = useMemo(() => location.pathname.startsWith('/admin'), [location.pathname]);
+  const adminLandingPath = useMemo(
+    () => getFirstAccessibleAdminPath(isAdmin, permissions),
+    [isAdmin, permissions]
+  );
 
   useEffect(() => {
     setIsMobileSidebarOpen(false);
@@ -203,7 +209,7 @@ const AppContent = () => {
                       ? '/cambiar-password'
                       : requiresTermsAcceptance
                         ? '/aceptacion-terminos'
-                        : '/admin'
+                        : adminLandingPath
                   }
                 />
               ) : (
@@ -339,7 +345,7 @@ const AppContent = () => {
               </PrivateRoute>
             }
           />
-          <Route path="*" element={<Navigate to={isLoggedIn ? '/admin' : '/'} />} />
+          <Route path="*" element={<Navigate to={isLoggedIn ? adminLandingPath : '/'} />} />
         </Routes>
       </main>
     </div>

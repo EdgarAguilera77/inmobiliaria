@@ -4,6 +4,56 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 const db = require('../db');
 
+const mapUserStatusToAgentStatus = (status) => (Number(status) === 1 ? 'Activo' : 'Inactivo');
+
+const ensureLinkedAgent = async (
+  connection,
+  { userId, name, phone, email, status, photoUrl = null, specialty = '' }
+) => {
+  const normalizedEmail = String(email || '').trim();
+  const normalizedName = String(name || '').trim();
+  const normalizedPhone = String(phone || '').trim();
+  const agentStatus = mapUserStatusToAgentStatus(status);
+
+  const [existingAgentRows] = await connection.query(
+    `SELECT ID_AGENTE
+     FROM agentes
+     WHERE ID_USUARIO = ? OR CORREO = ?
+     LIMIT 1`,
+    [userId, normalizedEmail]
+  );
+
+  if (existingAgentRows.length > 0) {
+    await connection.query(
+      `UPDATE agentes
+       SET ID_USUARIO = ?, NOMBRE = ?, CARGO = ?, TELEFONO = ?, CORREO = ?, FOTO_URL = COALESCE(?, FOTO_URL),
+           ESPECIALIDAD = COALESCE(NULLIF(ESPECIALIDAD, ''), ?), ESTADO = ?
+       WHERE ID_AGENTE = ?`,
+      [
+        userId,
+        normalizedName,
+        'Agente',
+        normalizedPhone,
+        normalizedEmail,
+        photoUrl,
+        specialty,
+        agentStatus,
+        existingAgentRows[0].ID_AGENTE,
+      ]
+    );
+
+    return existingAgentRows[0].ID_AGENTE;
+  }
+
+  const [insertAgentResult] = await connection.query(
+    `INSERT INTO agentes (ID_USUARIO, NOMBRE, CARGO, TELEFONO, CORREO, FOTO_URL, ESPECIALIDAD, ESTADO)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, normalizedName, 'Agente', normalizedPhone, normalizedEmail, photoUrl, specialty, agentStatus]
+  );
+
+  return insertAgentResult.insertId;
+};
+
 const getSqlErrorMessage = (error, fallbackMessage) => {
   if (!error || !error.code) {
     return fallbackMessage;
@@ -85,14 +135,20 @@ router.post('/', async (req, res) => {
     ID_SERVICIO,
     ESTADO,
     REQUIERE_ACEPTACION_TERMINOS,
+    FOTO_URL = null,
   } = req.body;
 
   if (!NOMBRE || !IDENTIFICACION || !CORREO || !TELEFONO || !PASSWORD || !ID_ROL || !ID_SERVICIO) {
     return res.status(400).json({ error: 'Faltan datos en la solicitud' });
   }
 
+  let connection;
+
   try {
-    const [existingUser] = await db.query(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [existingUser] = await connection.query(
       'SELECT COUNT(*) AS count FROM gestion_usuarios WHERE CORREO = ?',
       [CORREO]
     );
@@ -101,12 +157,12 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'Correo ya registrado' });
     }
 
-    const [[role]] = await db.query('SELECT ID_ROL FROM roles WHERE ID_ROL = ?', [ID_ROL]);
+    const [[role]] = await connection.query('SELECT ID_ROL FROM roles WHERE ID_ROL = ?', [ID_ROL]);
     if (!role) {
       return res.status(404).json({ error: 'Rol no encontrado' });
     }
 
-    const [[service]] = await db.query('SELECT ID_SERVICIO FROM servicios WHERE ID_SERVICIO = ?', [
+    const [[service]] = await connection.query('SELECT ID_SERVICIO FROM servicios WHERE ID_SERVICIO = ?', [
       ID_SERVICIO,
     ]);
     if (!service) {
@@ -122,7 +178,7 @@ router.post('/', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
 
-    const [result] = await db.query(sql, [
+    const [result] = await connection.query(sql, [
       NOMBRE,
       IDENTIFICACION,
       CORREO,
@@ -134,20 +190,37 @@ router.post('/', async (req, res) => {
       Number(REQUIERE_ACEPTACION_TERMINOS ?? 1),
     ]);
 
+    await ensureLinkedAgent(connection, {
+      userId: result.insertId,
+      name: NOMBRE,
+      phone: TELEFONO,
+      email: CORREO,
+      status: ESTADO,
+      photoUrl: FOTO_URL,
+    });
+
+    await connection.commit();
+
     return res.status(201).json({ message: 'Usuario creado con exito', usuarioId: result.insertId });
   } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error en la base de datos:', err);
     return res.status(500).json({ error: getSqlErrorMessage(err, 'Error interno del servidor') });
+  } finally {
+    connection?.release();
   }
 });
 
 // Obtener todos los usuarios con sus roles
 router.get('/', async (req, res) => {
   const sql = `
-    SELECT gu.*, r.NOMBRE_ROL, s.NOMBRE_SERVICIO
+    SELECT gu.*, r.NOMBRE_ROL, s.NOMBRE_SERVICIO, a.FOTO_URL
     FROM gestion_usuarios gu
     JOIN roles r ON gu.ID_ROL = r.ID_ROL
-    LEFT JOIN servicios s ON gu.ID_SERVICIO = s.ID_SERVICIO;
+    LEFT JOIN servicios s ON gu.ID_SERVICIO = s.ID_SERVICIO
+    LEFT JOIN agentes a ON a.ID_USUARIO = gu.CODIGO;
   `;
 
   try {
@@ -172,6 +245,7 @@ router.put('/:codigo', async (req, res) => {
     ID_SERVICIO,
     ESTADO,
     REQUIERE_ACEPTACION_TERMINOS,
+    FOTO_URL = null,
   } = req.body;
 
   if (
@@ -186,8 +260,13 @@ router.put('/:codigo', async (req, res) => {
     return res.status(400).json({ error: 'Faltan datos en la solicitud' });
   }
 
+  let connection;
+
   try {
-    const [existingUser] = await db.query('SELECT PASSWORD FROM gestion_usuarios WHERE CODIGO = ?', [
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [existingUser] = await connection.query('SELECT PASSWORD FROM gestion_usuarios WHERE CODIGO = ?', [
       codigo,
     ]);
 
@@ -195,7 +274,7 @@ router.put('/:codigo', async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const [duplicateEmailRows] = await db.query(
+    const [duplicateEmailRows] = await connection.query(
       'SELECT CODIGO FROM gestion_usuarios WHERE CORREO = ? AND CODIGO <> ?',
       [CORREO, codigo]
     );
@@ -204,12 +283,12 @@ router.put('/:codigo', async (req, res) => {
       return res.status(409).json({ error: 'Correo ya registrado por otro usuario' });
     }
 
-    const [[role]] = await db.query('SELECT ID_ROL FROM roles WHERE ID_ROL = ?', [ID_ROL]);
+    const [[role]] = await connection.query('SELECT ID_ROL FROM roles WHERE ID_ROL = ?', [ID_ROL]);
     if (!role) {
       return res.status(404).json({ error: 'Rol no encontrado' });
     }
 
-    const [[service]] = await db.query('SELECT ID_SERVICIO FROM servicios WHERE ID_SERVICIO = ?', [
+    const [[service]] = await connection.query('SELECT ID_SERVICIO FROM servicios WHERE ID_SERVICIO = ?', [
       ID_SERVICIO,
     ]);
     if (!service) {
@@ -231,7 +310,7 @@ router.put('/:codigo', async (req, res) => {
       WHERE CODIGO = ?;
     `;
 
-    const [result] = await db.query(sql, [
+    const [result] = await connection.query(sql, [
       NOMBRE,
       IDENTIFICACION,
       CORREO,
@@ -245,23 +324,58 @@ router.put('/:codigo', async (req, res) => {
       codigo,
     ]);
 
+    await ensureLinkedAgent(connection, {
+      userId: Number(codigo),
+      name: NOMBRE,
+      phone: TELEFONO,
+      email: CORREO,
+      status: ESTADO,
+      photoUrl: FOTO_URL,
+    });
+
+    await connection.commit();
+
     if (result.affectedRows > 0) {
       return res.status(200).json({ message: 'Usuario actualizado con exito' });
     }
 
     return res.status(404).json({ message: 'Usuario no encontrado' });
   } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error en la base de datos:', err);
     return res.status(500).json({ error: getSqlErrorMessage(err, err.message) });
+  } finally {
+    connection?.release();
   }
 });
 
 // Eliminar un usuario
 router.delete('/:codigo', async (req, res) => {
   const { codigo } = req.params;
+  let connection;
 
   try {
-    const [result] = await db.query('DELETE FROM gestion_usuarios WHERE CODIGO = ?', [codigo]);
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    await connection.query(
+      `DELETE FROM aceptaciones_terminos
+       WHERE CODIGO_USUARIO = ?`,
+      [codigo]
+    );
+
+    await connection.query(
+      `UPDATE agentes
+       SET ID_USUARIO = NULL, ESTADO = 'Inactivo'
+       WHERE ID_USUARIO = ?`,
+      [codigo]
+    );
+
+    const [result] = await connection.query('DELETE FROM gestion_usuarios WHERE CODIGO = ?', [codigo]);
+
+    await connection.commit();
 
     if (result.affectedRows > 0) {
       return res.status(200).json({ message: 'Usuario eliminado con exito' });
@@ -269,8 +383,13 @@ router.delete('/:codigo', async (req, res) => {
 
     return res.status(404).json({ message: 'Usuario no encontrado' });
   } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
     console.error('Error en la base de datos:', err);
     return res.status(500).json({ error: err.message });
+  } finally {
+    connection?.release();
   }
 });
 

@@ -1,7 +1,11 @@
 import React, { createContext, useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../../constants/api';
-import { ADMIN_PERMISSION_KEYS, MANAGED_PERMISSION_NAMES } from '../../constants/permissions';
+import {
+  ADMIN_PERMISSION_KEYS,
+  MANAGED_PERMISSION_NAMES,
+  getFirstAccessibleAdminPath,
+} from '../../constants/permissions';
 
 export const AuthContext = createContext();
 
@@ -64,8 +68,14 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (loggedUser.ID_ROL === 1) {
-        setPermissions(buildAdminPermissions());
+        const adminPermissions = buildAdminPermissions();
+        setPermissions(adminPermissions);
         setIsAdmin(true);
+        return {
+          success: true,
+          cambiarPassword: requiresPasswordChange,
+          redirectTo: getFirstAccessibleAdminPath(true, adminPermissions),
+        };
       } else {
         const permisosResponse = await axios.get(`${API_BASE}/rolesPermisos/rol/${loggedUser.ID_ROL}`);
         const formattedPermissions = permisosResponse.data.map((permission) => ({
@@ -74,9 +84,12 @@ export const AuthProvider = ({ children }) => {
         }));
         setPermissions(formattedPermissions);
         setIsAdmin(false);
+        return {
+          success: true,
+          cambiarPassword: requiresPasswordChange,
+          redirectTo: getFirstAccessibleAdminPath(false, formattedPermissions),
+        };
       }
-
-      return { success: true, cambiarPassword: requiresPasswordChange };
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesion. Verifique las credenciales.');
       return { success: false, message: 'Credenciales invalidas o error al obtener permisos.' };

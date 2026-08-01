@@ -451,16 +451,33 @@ const defaultSaleForm = {
 };
 
 export const AdminSalesPage = () => {
-  const { hasPermission, user } = useContext(AuthContext);
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
   const { sales, agents, commissionSettings, updateSale, deleteSale, isLoading } = useRealEstate();
   const canCreate = hasPermission('Ventas', 'CREAR');
   const canDelete = hasPermission('Ventas', 'ELIMINAR');
   const [editingSale, setEditingSale] = useState(null);
   const [formData, setFormData] = useState(defaultSaleForm);
-  const pagination = useAdminPagination(sales);
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const filteredSales = useMemo(
+    () =>
+      isAdmin
+        ? sales
+        : loggedAgent
+          ? sales.filter((sale) => String(sale.agentId) === String(loggedAgent.id))
+          : [],
+    [isAdmin, loggedAgent, sales]
+  );
+  const modalAgents = useMemo(
+    () => (isAdmin ? agents : loggedAgent ? [loggedAgent] : []),
+    [agents, isAdmin, loggedAgent]
+  );
+  const pagination = useAdminPagination(filteredSales);
   const monthlySalesTotal = useMemo(
     () =>
-      sales.reduce((total, sale) => {
+      filteredSales.reduce((total, sale) => {
         const saleDate = sale.closingDate ? new Date(sale.closingDate) : null;
         const now = new Date();
         if (
@@ -472,7 +489,7 @@ export const AdminSalesPage = () => {
         }
         return total + Number(sale.closingPrice || 0);
       }, 0),
-    [sales]
+    [filteredSales]
   );
 
   const openEditModal = (sale) => {
@@ -522,11 +539,21 @@ export const AdminSalesPage = () => {
         title="Ventas"
         text="Consulta cierres de negocio, edita ventas registradas y revierte operaciones si es necesario."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo las ventas del agente <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran ventas.
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
           <span>Ventas registradas</span>
-          <strong>{sales.length}</strong>
+          <strong>{filteredSales.length}</strong>
         </div>
         <div className="admin-inline-summary">
           <span>Total del mes</span>
@@ -599,7 +626,7 @@ export const AdminSalesPage = () => {
         <AdminPagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
-          totalItems={sales.length}
+          totalItems={filteredSales.length}
           itemsPerPage={pagination.itemsPerPage}
           onPageChange={pagination.setCurrentPage}
           onItemsPerPageChange={pagination.setItemsPerPage}
@@ -610,7 +637,7 @@ export const AdminSalesPage = () => {
         title="Editar venta cerrada"
         formData={formData}
         setFormData={setFormData}
-        agents={agents}
+        agents={modalAgents}
         onClose={resetModal}
         onSubmit={handleSubmit}
         canCreate={canCreate}
@@ -620,8 +647,8 @@ export const AdminSalesPage = () => {
 };
 
 export const AdminCommissionsPage = () => {
-  const { hasPermission } = useContext(AuthContext);
-  const { commissions, commissionSettings, saveCommissionSettings, updateCommissionStatus, isLoading } = useRealEstate();
+  const { hasPermission, user, isAdmin } = useContext(AuthContext);
+  const { commissions, commissionSettings, saveCommissionSettings, updateCommissionStatus, isLoading, agents } = useRealEstate();
   const canCreate = hasPermission('Comisiones', 'CREAR');
   const [selectedCommission, setSelectedCommission] = useState(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -631,13 +658,26 @@ export const AdminCommissionsPage = () => {
     paymentNotes: '',
     platformRate: '',
   });
+  const loggedAgent = useMemo(
+    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [agents, user?.CODIGO]
+  );
+  const filteredCommissions = useMemo(
+    () =>
+      isAdmin
+        ? commissions
+        : loggedAgent
+          ? commissions.filter((commission) => String(commission.agentId) === String(loggedAgent.id))
+          : [],
+    [commissions, isAdmin, loggedAgent]
+  );
   const [settingsForm, setSettingsForm] = useState({
     minimumRate: String(commissionSettings.minimumRate),
     maximumRate: String(commissionSettings.maximumRate),
     defaultRate: String(commissionSettings.defaultRate),
     defaultAgentRate: String(commissionSettings.defaultAgentRate),
   });
-  const pagination = useAdminPagination(commissions);
+  const pagination = useAdminPagination(filteredCommissions);
 
   useEffect(() => {
     setSettingsForm({
@@ -704,14 +744,14 @@ export const AdminCommissionsPage = () => {
 
   const summary = useMemo(
     () => ({
-      pending: commissions
+      pending: filteredCommissions
         .filter((commission) => commission.status === 'Pendiente')
         .reduce((total, commission) => total + commission.amount, 0),
-      paid: commissions
+      paid: filteredCommissions
         .filter((commission) => commission.status === 'Pagada')
         .reduce((total, commission) => total + commission.amount, 0),
     }),
-    [commissions]
+    [filteredCommissions]
   );
 
   if (isLoading) {
@@ -724,6 +764,16 @@ export const AdminCommissionsPage = () => {
         title="Comisiones"
         text="Controla cuanto se debe pagar, que ya fue liquidado y el estado administrativo de cada comision."
       />
+      {!isAdmin && loggedAgent && (
+        <div className="permission-hint">
+          Mostrando solo las comisiones del agente <strong>{loggedAgent.name}</strong>.
+        </div>
+      )}
+      {!isAdmin && !loggedAgent && (
+        <div className="feedback-banner warning">
+          Tu usuario aun no esta vinculado a un agente. Por eso no se muestran comisiones.
+        </div>
+      )}
       <PermissionHint canCreate={canCreate} canDelete={false} />
       <div className="admin-stat-grid admin-stat-grid-compact">
         <div className="admin-stat-card">
@@ -738,7 +788,7 @@ export const AdminCommissionsPage = () => {
       <div className="admin-panel-toolbar">
         <div className="admin-inline-summary">
           <span>Comisiones registradas</span>
-          <strong>{commissions.length}</strong>
+          <strong>{filteredCommissions.length}</strong>
         </div>
         {canCreate && (
           <button type="button" className="primary-button" onClick={openSettingsModal}>
@@ -794,7 +844,7 @@ export const AdminCommissionsPage = () => {
         <AdminPagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
-          totalItems={commissions.length}
+          totalItems={filteredCommissions.length}
           itemsPerPage={pagination.itemsPerPage}
           onPageChange={pagination.setCurrentPage}
           onItemsPerPageChange={pagination.setItemsPerPage}
