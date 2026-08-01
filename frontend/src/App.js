@@ -39,7 +39,9 @@ import { getFirstAccessibleAdminPath } from './constants/permissions';
 import './App.css';
 
 const PrivateRoute = ({ children, requiredPermission }) => {
-  const { isLoggedIn, hasPermission, requiresTermsAcceptance } = useContext(AuthContext);
+  const { isLoggedIn, hasPermission, requiresTermsAcceptance, isAdmin, permissions } =
+    useContext(AuthContext);
+  const fallbackAdminPath = getFirstAccessibleAdminPath(isAdmin, permissions);
 
   if (!isLoggedIn) {
     return <Navigate to="/login" />;
@@ -52,7 +54,7 @@ const PrivateRoute = ({ children, requiredPermission }) => {
   if (!requiredPermission || hasPermission(requiredPermission, 'VER')) {
     return children;
   }
-  return <Navigate to="/" />;
+  return <Navigate to={fallbackAdminPath === '/admin' ? '/' : fallbackAdminPath} />;
 };
 
 const AppContent = () => {

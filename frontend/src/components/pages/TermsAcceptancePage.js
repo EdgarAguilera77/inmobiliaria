@@ -1,13 +1,19 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './AuthContext';
+import { getFirstAccessibleAdminPath } from '../../constants/permissions';
 
 const TermsAcceptancePage = () => {
   const navigate = useNavigate();
-  const { acceptTerms, logout, termsDocument, user } = useContext(AuthContext);
+  const { acceptTerms, logout, termsDocument, user, isAdmin, permissions } =
+    useContext(AuthContext);
   const [hasAccepted, setHasAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const adminLandingPath = useMemo(
+    () => getFirstAccessibleAdminPath(isAdmin, permissions),
+    [isAdmin, permissions]
+  );
 
   const paragraphs = useMemo(
     () =>
@@ -30,7 +36,7 @@ const TermsAcceptancePage = () => {
     const result = await acceptTerms();
 
     if (result.success) {
-      navigate('/admin');
+      navigate(adminLandingPath === '/admin' ? '/admin' : adminLandingPath);
       return;
     }
 

@@ -168,6 +168,8 @@ const CloseSaleModal = ({
     return null;
   }
 
+  const safeAgents = agents.filter(Boolean);
+
   const estimatedCommission =
     (Number(formData.closingPrice || 0) * Number(formData.commissionRate || 0)) / 100;
   const normalizedPlatformFeeRate = Math.min(
@@ -230,7 +232,7 @@ const CloseSaleModal = ({
               required
             >
               <option value="">Agente</option>
-              {agents.map((agent) => (
+              {safeAgents.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
                 </option>
@@ -325,6 +327,8 @@ const PropertyFormModal = ({
   if (!isOpen) {
     return null;
   }
+
+  const safeAgents = agents.filter(Boolean);
 
   const selectedType = propertyTypes.find((type) => String(type.id) === String(formData.typeId));
   const propertyCategory = inferPropertyCategory(selectedType);
@@ -423,7 +427,7 @@ const PropertyFormModal = ({
                 disabled={!canCreate || isSaving}
               >
                 <option value="">Agente</option>
-                {agents.map((agent) => (
+                {safeAgents.map((agent) => (
                   <option key={agent.id} value={agent.id}>
                     {agent.name}
                   </option>
@@ -939,9 +943,10 @@ export const AdminDashboardPage = () => {
     publicationPayments,
     isLoading,
   } = useRealEstate();
+  const normalizedAgents = useMemo(() => agents.filter(Boolean), [agents]);
   const loggedAgent = useMemo(
-    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
-    [agents, user?.CODIGO]
+    () => normalizedAgents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [normalizedAgents, user?.CODIGO]
   );
   const isAgentScopedView = !isAdmin;
   const scopedProperties = useMemo(
@@ -1078,12 +1083,12 @@ export const AdminDashboardPage = () => {
           label="Agentes activos"
           value={
             isAgentScopedView
-              ? agents.filter(
+              ? normalizedAgents.filter(
                   (agent) =>
                     agent.status === 'Activo' &&
                     String(agent.id) === String(loggedAgent.id)
                 ).length
-              : agents.filter((agent) => agent.status === 'Activo').length
+              : normalizedAgents.filter((agent) => agent.status === 'Activo').length
           }
         />
         <AdminStatCard label="Ventas del mes" value={formatCurrency(monthlySalesTotal, 0)} />
@@ -1157,6 +1162,7 @@ export const AdminPropertiesPage = () => {
     togglePropertyPublication,
     togglePropertyFeatured,
   } = useRealEstate();
+  const normalizedAgents = useMemo(() => agents.filter(Boolean), [agents]);
   const canCreate = hasPermission('Propiedades', 'CREAR');
   const canDelete = hasPermission('Propiedades', 'ELIMINAR');
   const canCreateSales = hasPermission('Ventas', 'CREAR');
@@ -1171,8 +1177,8 @@ export const AdminPropertiesPage = () => {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [isSavingProperty, setIsSavingProperty] = useState(false);
   const loggedAgent = useMemo(
-    () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
-    [agents, user?.CODIGO]
+    () => normalizedAgents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
+    [normalizedAgents, user?.CODIGO]
   );
   const scopedProperties = useMemo(
     () =>
@@ -1494,16 +1500,16 @@ export const AdminPropertiesPage = () => {
           onItemsPerPageChange={setItemsPerPage}
         />
       </div>
-      <PropertyFormModal
-        isOpen={isPropertyModalOpen}
-        editingId={editingId}
+        <PropertyFormModal
+          isOpen={isPropertyModalOpen}
+          editingId={editingId}
         canCreate={canCreate}
         formData={formData}
         setFormData={setFormData}
         propertyTypes={propertyTypes}
         zones={zones}
-        agents={agents}
-        loggedAgent={loggedAgent}
+          agents={normalizedAgents}
+          loggedAgent={loggedAgent}
         handleCoverFileChange={handleCoverFileChange}
         handleGalleryFileChange={handleGalleryFileChange}
         propertyImagePreviews={propertyImagePreviews}
@@ -1512,15 +1518,15 @@ export const AdminPropertiesPage = () => {
         onClose={closePropertyModal}
         onSubmit={submitForm}
       />
-      <CloseSaleModal
-        isOpen={Boolean(saleProperty)}
-        property={saleProperty}
-        formData={saleForm}
-        setFormData={setSaleForm}
-        agents={agents}
-        onClose={closeSaleModal}
-        onSubmit={submitSale}
-      />
+        <CloseSaleModal
+          isOpen={Boolean(saleProperty)}
+          property={saleProperty}
+          formData={saleForm}
+          setFormData={setSaleForm}
+          agents={normalizedAgents}
+          onClose={closeSaleModal}
+          onSubmit={submitSale}
+        />
     </div>
   );
 };
