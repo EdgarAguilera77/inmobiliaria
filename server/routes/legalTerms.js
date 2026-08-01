@@ -32,6 +32,29 @@ router.get('/history', async (_req, res) => {
   }
 });
 
+router.delete('/history/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await db.query(
+      `
+        DELETE FROM aceptaciones_terminos
+        WHERE ID_ACEPTACION = ?
+      `,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Registro de aceptacion no encontrado.' });
+    }
+
+    return res.status(200).json({ message: 'Registro de aceptacion eliminado correctamente.' });
+  } catch (error) {
+    console.error('Error al eliminar la aceptacion de terminos:', error);
+    return res.status(500).json({ error: 'No se pudo eliminar el registro de aceptacion.' });
+  }
+});
+
 router.get('/status/:codigo', async (req, res) => {
   const { codigo } = req.params;
 

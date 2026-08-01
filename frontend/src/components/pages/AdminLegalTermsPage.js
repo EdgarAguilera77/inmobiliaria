@@ -266,6 +266,7 @@ export const AdminLegalTermsPage = () => {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState('');
 
   const loadAcceptances = async () => {
     setIsLoading(true);
@@ -285,6 +286,29 @@ export const AdminLegalTermsPage = () => {
   useEffect(() => {
     loadAcceptances();
   }, []);
+
+  const removeAcceptance = async (acceptanceId) => {
+    if (!canDelete) {
+      return;
+    }
+
+    setError('');
+    setFeedback('');
+
+    try {
+      await api.delete(`/legal-terms/history/${acceptanceId}`);
+      if (selectedAcceptance?.ID_ACEPTACION === acceptanceId) {
+        setSelectedAcceptance(null);
+      }
+      setFeedback('Registro de aceptacion eliminado correctamente.');
+      await loadAcceptances();
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.error ||
+          'No se pudo eliminar el registro de aceptacion.'
+      );
+    }
+  };
 
   const userOptions = useMemo(() => {
     const seen = new Map();
@@ -332,14 +356,12 @@ export const AdminLegalTermsPage = () => {
       />
       <PermissionHint canCreate={canCreate} canDelete={canDelete} />
       {error && <div className="feedback-banner error">{error}</div>}
+      {feedback && <div className="feedback-banner success">{feedback}</div>}
 
       <div className="admin-panel">
         <div className="admin-panel-toolbar">
           <div>
             <h3>Historial de aceptacion de terminos</h3>
-            <p className="muted-copy">
-              Este historial se guarda en la tabla <strong>aceptaciones_terminos</strong> de MySQL.
-            </p>
           </div>
           <div className="admin-history-toolbar">
             <select value={selectedUser} onChange={(event) => setSelectedUser(event.target.value)}>
@@ -392,6 +414,14 @@ export const AdminLegalTermsPage = () => {
                       <ActionButton onClick={() => exportAcceptancePdf(acceptance)}>
                         PDF
                       </ActionButton>
+                      {canDelete && (
+                        <ActionButton
+                          onClick={() => removeAcceptance(acceptance.ID_ACEPTACION)}
+                          tone="danger"
+                        >
+                          Eliminar
+                        </ActionButton>
+                      )}
                     </div>
                   </td>
                 </tr>
