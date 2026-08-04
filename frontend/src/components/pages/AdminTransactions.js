@@ -12,6 +12,9 @@ const currencyFormatter = new Intl.NumberFormat('es-HN', {
 const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
 const DEFAULT_COMMISSION_RATE = 5;
 const DEFAULT_PLATFORM_FEE_RATE = 5;
+const isSelectableAgent = (agent) =>
+  Boolean(agent && agent.userId && String(agent.status || '').toLowerCase() === 'activo');
+
 const clampPercent = (value, fallback) => {
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) {
@@ -178,6 +181,8 @@ const SaleModal = ({
   formData,
   setFormData,
   agents,
+  isAdmin,
+  loggedAgent,
   onClose,
   onSubmit,
   canCreate,
@@ -245,19 +250,23 @@ const SaleModal = ({
             />
           </div>
           <div className="admin-form-row">
-            <select
-              value={formData.agentId}
-              onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
-              required
-              disabled={!canCreate}
-            >
-              <option value="">Agente</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {isAdmin || !loggedAgent ? (
+              <select
+                value={formData.agentId}
+                onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
+                required
+                disabled={!canCreate}
+              >
+                <option value="">Agente</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input value={loggedAgent.name} readOnly disabled />
+            )}
             <select
               value={formData.businessType}
               onChange={(event) => setFormData({ ...formData, businessType: event.target.value })}
@@ -457,6 +466,7 @@ export const AdminSalesPage = () => {
   const canDelete = hasPermission('Ventas', 'ELIMINAR');
   const [editingSale, setEditingSale] = useState(null);
   const [formData, setFormData] = useState(defaultSaleForm);
+  const selectableAgents = useMemo(() => agents.filter(isSelectableAgent), [agents]);
   const loggedAgent = useMemo(
     () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
     [agents, user?.CODIGO]
@@ -471,8 +481,8 @@ export const AdminSalesPage = () => {
     [isAdmin, loggedAgent, sales]
   );
   const modalAgents = useMemo(
-    () => (isAdmin ? agents : loggedAgent ? [loggedAgent] : []),
-    [agents, isAdmin, loggedAgent]
+    () => (isAdmin ? selectableAgents : loggedAgent ? [loggedAgent] : []),
+    [isAdmin, loggedAgent, selectableAgents]
   );
   const pagination = useAdminPagination(filteredSales);
   const monthlySalesTotal = useMemo(
@@ -638,6 +648,8 @@ export const AdminSalesPage = () => {
         formData={formData}
         setFormData={setFormData}
         agents={modalAgents}
+        isAdmin={isAdmin}
+        loggedAgent={loggedAgent}
         onClose={resetModal}
         onSubmit={handleSubmit}
         canCreate={canCreate}

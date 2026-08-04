@@ -11,6 +11,9 @@ const currencyFormatter = new Intl.NumberFormat('es-HN', {
 });
 
 const formatMoney = (value) => currencyFormatter.format(Number(value || 0));
+const isSelectableAgent = (agent) =>
+  Boolean(agent && agent.userId && String(agent.status || '').toLowerCase() === 'activo');
+
 const todayString = () => new Date().toISOString().slice(0, 10);
 const addDaysToDateString = (dateValue, daysToAdd) => {
   const nextDate = new Date(dateValue || todayString());
@@ -366,6 +369,7 @@ export const AdminSubscriptionsPage = () => {
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const agentFilter = searchParams.get('agentId') || '';
   const statusFilter = searchParams.get('status') || '';
+  const selectableAgents = useMemo(() => agents.filter(isSelectableAgent), [agents]);
   const loggedAgent = useMemo(
     () => agents.find((agent) => String(agent.userId) === String(user?.CODIGO)),
     [agents, user?.CODIGO]
@@ -650,18 +654,22 @@ export const AdminSubscriptionsPage = () => {
             </select>
           </div>
           <div className="admin-form-row">
-            <select
-              value={formData.agentId}
-              onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
-              disabled={!canCreate || !isAdmin}
-            >
-              <option value="">Agente responsable</option>
-              {(isAdmin ? agents : loggedAgent ? [loggedAgent] : []).map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {isAdmin || !loggedAgent ? (
+              <select
+                value={formData.agentId}
+                onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
+                disabled={!canCreate || !isAdmin}
+              >
+                <option value="">Agente responsable</option>
+                {(isAdmin ? selectableAgents : []).map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input value={loggedAgent.name} readOnly disabled />
+            )}
             <input
               value={selectedPlan ? formatMoney(selectedPlan.price) : ''}
               placeholder="Monto de suscripcion"

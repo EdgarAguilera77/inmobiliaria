@@ -69,6 +69,9 @@ const createEmptySaleClosure = (commissionSettings = null) => ({
 
 const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024;
 
+const isSelectableAgent = (agent) =>
+  Boolean(agent && agent.userId && String(agent.status || '').toLowerCase() === 'activo');
+
 const readFileAsDataUrl = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -169,6 +172,7 @@ const CloseSaleModal = ({
   }
 
   const safeAgents = agents.filter(Boolean);
+  const linkedAgent = safeAgents.find((agent) => String(agent.id) === String(property.agentId));
 
   const estimatedCommission =
     (Number(formData.closingPrice || 0) * Number(formData.commissionRate || 0)) / 100;
@@ -226,18 +230,22 @@ const CloseSaleModal = ({
             />
           </div>
           <div className="admin-form-row">
-            <select
-              value={formData.agentId}
-              onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
-              required
-            >
-              <option value="">Agente</option>
-              {safeAgents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {linkedAgent && safeAgents.length <= 1 ? (
+              <input value={linkedAgent.name} readOnly disabled />
+            ) : (
+              <select
+                value={formData.agentId}
+                onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
+                required
+              >
+                <option value="">Agente</option>
+                {safeAgents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <select
               value={formData.businessType}
               onChange={(event) => setFormData({ ...formData, businessType: event.target.value })}
@@ -309,6 +317,7 @@ const CloseSaleModal = ({
 const PropertyFormModal = ({
   isOpen,
   editingId,
+  isAdmin,
   canCreate,
   formData,
   setFormData,
@@ -419,7 +428,7 @@ const PropertyFormModal = ({
             </select>
           </div>
           <div className="admin-form-row">
-            {editingId || !loggedAgent ? (
+            {isAdmin || !loggedAgent ? (
               <select
                 value={formData.agentId}
                 onChange={(event) => setFormData({ ...formData, agentId: event.target.value })}
@@ -1165,6 +1174,10 @@ export const AdminPropertiesPage = () => {
     togglePropertyFeatured,
   } = useRealEstate();
   const normalizedAgents = useMemo(() => agents.filter(Boolean), [agents]);
+  const selectableAgents = useMemo(
+    () => normalizedAgents.filter(isSelectableAgent),
+    [normalizedAgents]
+  );
   const canCreate = hasPermission('Propiedades', 'CREAR');
   const canDelete = hasPermission('Propiedades', 'ELIMINAR');
   const canCreateSales = hasPermission('Ventas', 'CREAR');
@@ -1505,27 +1518,28 @@ export const AdminPropertiesPage = () => {
         <PropertyFormModal
           isOpen={isPropertyModalOpen}
           editingId={editingId}
-        canCreate={canCreate}
-        formData={formData}
-        setFormData={setFormData}
-        propertyTypes={propertyTypes}
-        zones={zones}
-          agents={normalizedAgents}
+          isAdmin={isAdmin}
+          canCreate={canCreate}
+          formData={formData}
+          setFormData={setFormData}
+          propertyTypes={propertyTypes}
+          zones={zones}
+          agents={selectableAgents}
           loggedAgent={loggedAgent}
-        handleCoverFileChange={handleCoverFileChange}
-        handleGalleryFileChange={handleGalleryFileChange}
-        propertyImagePreviews={propertyImagePreviews}
-        imageError={imageError}
-        isSaving={isSavingProperty}
-        onClose={closePropertyModal}
-        onSubmit={submitForm}
-      />
+          handleCoverFileChange={handleCoverFileChange}
+          handleGalleryFileChange={handleGalleryFileChange}
+          propertyImagePreviews={propertyImagePreviews}
+          imageError={imageError}
+          isSaving={isSavingProperty}
+          onClose={closePropertyModal}
+          onSubmit={submitForm}
+        />
         <CloseSaleModal
           isOpen={Boolean(saleProperty)}
           property={saleProperty}
           formData={saleForm}
           setFormData={setSaleForm}
-          agents={normalizedAgents}
+          agents={isAdmin ? selectableAgents : loggedAgent ? [loggedAgent] : []}
           onClose={closeSaleModal}
           onSubmit={submitSale}
         />
