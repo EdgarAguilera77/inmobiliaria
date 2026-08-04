@@ -1083,11 +1083,13 @@ export const AdminDashboardPage = () => {
           label="Agentes activos"
           value={
             isAgentScopedView
-              ? normalizedAgents.filter(
+              ? loggedAgent
+                ? normalizedAgents.filter(
                   (agent) =>
                     agent.status === 'Activo' &&
                     String(agent.id) === String(loggedAgent.id)
-                ).length
+                  ).length
+                : 0
               : normalizedAgents.filter((agent) => agent.status === 'Activo').length
           }
         />
